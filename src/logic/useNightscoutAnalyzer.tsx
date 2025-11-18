@@ -16,17 +16,27 @@ export function useNightscoutAnalyzer(defaultDays: number = 3) {
     }
 
     try {
+      // Convert string values to numbers if needed
+      const daysNum =
+        typeof configuration.days === "string"
+          ? Number(configuration.days)
+          : configuration.days;
+      const basalStepNum =
+        typeof configuration.basalStep === "string"
+          ? Number(configuration.basalStep)
+          : configuration.basalStep;
+
       // Fetch data
       const fetchResult = await fetch.fetchFromApi(
         configuration.apiUrl,
         configuration.token,
-        configuration.days
+        daysNum
       );
 
       // Run analysis
       const analysisResult = await analysis.runAnalysis({
         ...fetchResult,
-        basalStep: configuration.basalStep,
+        basalStep: basalStepNum,
       });
 
       return analysisResult;

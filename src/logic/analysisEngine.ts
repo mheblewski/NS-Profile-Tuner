@@ -6,10 +6,13 @@ import {
   hourlyAverage,
   computeBasalAdjustments,
   analyzeTreatments,
+  analyzeHourlyICR,
+  type HourlyICRAdjustment,
 } from "./dataAnalysis";
 import {
   parseLoopProfile,
   applyAdjustmentsToProfile,
+  applyHourlyICRAdjustments,
   type ProfileAdjustments,
 } from "./profileUtils";
 
@@ -18,6 +21,7 @@ export interface AnalysisResult {
   basalAdj: number[];
   icrPct: number;
   isfPct: number;
+  hourlyICRAdjustments: HourlyICRAdjustment[];
   adjustments: ProfileAdjustments;
   basalStep: number;
 }
@@ -44,19 +48,36 @@ export async function performAnalysis(
     parsedProfile = parseLoopProfile(profile);
   }
 
+  // Analyze hourly ICR effectiveness
+  const profileForICR = parsedProfile || profile || {};
+  const hourlyICRAdjustments = analyzeHourlyICR(
+    entries,
+    treatments,
+    profileForICR.icr || []
+  );
+
   const adjustments = applyAdjustmentsToProfile(
-    parsedProfile || profile || {},
+    profileForICR,
     basalAdj,
     icrPct,
     isfPct,
     basalStep
   );
 
+  // Apply hourly ICR adjustments (replace the old ICR with new smart one)
+  if (hourlyICRAdjustments.length > 0) {
+    adjustments.newICR = applyHourlyICRAdjustments(
+      profileForICR,
+      hourlyICRAdjustments
+    );
+  }
+
   return {
     hourlyAvg,
     basalAdj,
     icrPct,
     isfPct,
+    hourlyICRAdjustments,
     adjustments,
     basalStep,
   };

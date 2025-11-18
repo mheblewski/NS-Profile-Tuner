@@ -24,6 +24,9 @@ export default function ICRComparisonTable({ icrData }) {
             <th className="p-2 text-center">Nowe (g/U)</th>
             <th className="p-2 text-center">Δ%</th>
             <th className="p-2 text-center">U/WW</th>
+            <th className="p-2 text-center hidden">Pewność</th>
+            <th className="p-2 text-center hidden">Posiłki</th>
+            <th className="p-2 text-center hidden">Sukces</th>
           </tr>
         </thead>
         <tbody>
@@ -41,10 +44,48 @@ export default function ICRComparisonTable({ icrData }) {
               <td className="p-2 text-center">
                 {c.oldUperWW} → <strong>{c.newUperWW}</strong>
               </td>
+              <td className="p-2 text-center hidden">
+                {c.confidence ? (
+                  <span
+                    className={`px-1 py-0.5 rounded text-xs ${
+                      c.confidence > 0.7
+                        ? "bg-green-100 text-green-800"
+                        : c.confidence > 0.4
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {Math.round(c.confidence * 100)}%
+                  </span>
+                ) : (
+                  "-"
+                )}
+              </td>
+              <td className="p-2 text-center hidden">{c.mealCount || 0}</td>
+              <td className="p-2 text-center hidden">
+                {c.successRate !== undefined
+                  ? `${Math.round(c.successRate * 100)}%`
+                  : "-"}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {icrData.some((c) => c.confidence) && (
+        <div className="mt-2 text-xs text-gray-600">
+          <div>
+            * Pewność oparta na liczbie posiłków i wynikach glikemicznych
+          </div>
+          <div>
+            * Analizowane posiłki: wszystkie &gt;5g węglowodanów lub z bolusem
+            insuliny
+          </div>
+          <div>
+            * Kryteria sukcesu dostosowane do wielkości posiłku (małe:
+            &lt;160/130, średnie: &lt;170/135, duże: &lt;180/140 mg/dL)
+          </div>
+        </div>
+      )}
     </section>
   );
 }

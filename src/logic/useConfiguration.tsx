@@ -4,8 +4,8 @@ import { validateApiConfiguration } from "./validationUtils";
 export interface Configuration {
   apiUrl: string;
   token: string;
-  days: number;
-  basalStep: number;
+  days: number | string;
+  basalStep: number | string;
 }
 
 /**
@@ -35,11 +35,18 @@ function validateConfiguration(config: Configuration): string[] {
     errors.push("API token is required");
   }
 
-  if (config.days < 1 || config.days > 30) {
+  const daysNum =
+    typeof config.days === "string" ? Number(config.days) : config.days;
+  const basalStepNum =
+    typeof config.basalStep === "string"
+      ? Number(config.basalStep)
+      : config.basalStep;
+
+  if (isNaN(daysNum) || daysNum < 1 || daysNum > 30) {
     errors.push("Days must be between 1 and 30");
   }
 
-  if (config.basalStep <= 0 || config.basalStep > 1) {
+  if (isNaN(basalStepNum) || basalStepNum <= 0 || basalStepNum > 1) {
     errors.push("Basal step must be between 0.001 and 1.0");
   }
 
@@ -52,8 +59,8 @@ function validateConfiguration(config: Configuration): string[] {
 export function useConfiguration(defaultDays: number = 3) {
   const [apiUrl, setApiUrl] = useState("");
   const [token, setToken] = useState("");
-  const [days, setDays] = useState(defaultDays);
-  const [basalStep, setBasalStep] = useState(0.05);
+  const [days, setDays] = useState<number | string>(defaultDays);
+  const [basalStep, setBasalStep] = useState<number | string>(0.05);
 
   const configuration: Configuration = {
     apiUrl,
@@ -74,8 +81,16 @@ export function useConfiguration(defaultDays: number = 3) {
     // Simplified validation - just check if required fields are not empty
     const hasApiUrl = apiUrl.trim() !== "";
     const hasToken = token.trim() !== "";
-    const validDays = days >= 1 && days <= 30;
-    const validBasalStep = basalStep > 0 && basalStep <= 1;
+    const daysNum =
+      typeof days === "string" ? (days === "" ? 0 : Number(days)) : days;
+    const basalStepNum =
+      typeof basalStep === "string"
+        ? basalStep === ""
+          ? 0
+          : Number(basalStep)
+        : basalStep;
+    const validDays = daysNum >= 1 && daysNum <= 30;
+    const validBasalStep = basalStepNum > 0 && basalStepNum <= 1;
 
     return hasApiUrl && hasToken && validDays && validBasalStep;
   };

@@ -2,6 +2,8 @@
  * Functions for handling profile parsing and adjustments
  */
 
+import { type HourlyICRAdjustment } from "./dataAnalysis";
+
 export interface ProfileAdjustments {
   newBasal: Array<{
     time: string;
@@ -14,6 +16,9 @@ export interface ProfileAdjustments {
     old: number;
     new: number;
     pct: number;
+    confidence?: number;
+    mealCount?: number;
+    successRate?: number;
     oldUperWW: number;
     newUperWW: number;
   }>;
@@ -189,4 +194,63 @@ export function applyAdjustmentsToProfile(
     newICR,
     newSens,
   };
+}
+
+/**
+ * Applies hourly ICR adjustments based on glucose outcomes
+ */
+export function applyHourlyICRAdjustments(
+  profileObj: any,
+  hourlyAdjustments: HourlyICRAdjustment[]
+): Array<{
+  time: string;
+  old: number;
+  new: number;
+  pct: number;
+  confidence: number;
+  mealCount: number;
+  successRate: number;
+  oldUperWW: number;
+  newUperWW: number;
+}> {
+  if (!profileObj?.icr || !Array.isArray(profileObj.icr)) {
+    return [];
+  }
+
+  // Create adjustment map by hour
+  const adjustmentMap = new Map<number, HourlyICRAdjustment>();
+  hourlyAdjustments.forEach((adj) => adjustmentMap.set(adj.hour, adj));
+
+  return profileObj.icr.map((icrEntry: any) => {
+    const [hourStr] = (icrEntry.time || icrEntry.start).split(":");
+    const hour = parseInt(hourStr);
+    const adjustment = adjustmentMap.get(hour);
+
+    const oldVal = Number(icrEntry.value);
+    let newVal = oldVal;
+    let pct = 0;
+    let confidence = 0;
+    let mealCount = 0;
+    let successRate = 0;
+
+    if (adjustment && adjustment.confidence > 0.3) {
+      newVal = adjustment.suggestedICR;
+      pct = adjustment.adjustmentPct;
+      confidence = adjustment.confidence;
+      mealCount = adjustment.mealCount;
+      successRate = adjustment.successRate;
+    }
+
+    return {
+      time: icrEntry.time || icrEntry.start,
+      old: oldVal,
+      new: newVal,
+      pct,
+      confidence,
+      mealCount,
+      successRate,
+      oldUperWW: Number((10 / oldVal).toFixed(2)),
+      newUperWW: Number((10 / newVal).toFixed(2)),
+    };
+  });
 }

@@ -59,8 +59,18 @@ export default function ConfigurationForm({
                 min="1"
                 max="30"
                 className="w-full p-2 pr-12 text-sm border rounded"
-                value={days}
-                onChange={(e) => setDays(Number(e.target.value))}
+                value={days === "" ? "" : days}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "") {
+                    setDays("");
+                  } else {
+                    const num = Number(value);
+                    if (!isNaN(num)) {
+                      setDays(num);
+                    }
+                  }
+                }}
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
                 dni
@@ -81,8 +91,18 @@ export default function ConfigurationForm({
                 max="1"
                 step="0.001"
                 className="w-full p-2 pr-8 text-sm border rounded"
-                value={basalStep}
-                onChange={(e) => setBasalStep(Number(e.target.value))}
+                value={basalStep === "" ? "" : basalStep}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "") {
+                    setBasalStep("");
+                  } else {
+                    const num = Number(value);
+                    if (!isNaN(num)) {
+                      setBasalStep(num);
+                    }
+                  }
+                }}
                 placeholder="0.05"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
