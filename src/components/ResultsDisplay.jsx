@@ -18,7 +18,10 @@ export default function ResultsDisplay({ result }) {
         basalStep={result.basalStep}
       />
 
-      <ICRComparisonTable icrData={result.adjustments.newICR} />
+      <ICRComparisonTable
+        icrData={result.adjustments.newICR}
+        icrStructuredData={result.hourlyICRAdjustments}
+      />
 
       <ISFComparisonTable
         isfData={result.adjustments.newSens}

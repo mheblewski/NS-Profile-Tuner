@@ -471,14 +471,8 @@ export function analyzeHourlyISF(
   newSlots: HourlyISFAdjustment[];
   profileCompliant: HourlyISFAdjustment[];
 } {
-  console.log("🔍 ISF Analysis - FULL DEBUG MODE");
-  console.log(
-    `📊 Processing ${entries.length} entries and ${treatments.length} treatments`
-  );
-
   // Safety check for profile ISF
   if (!profileISF || profileISF.length === 0) {
-    console.log("❌ No ISF profile provided");
     return { modifications: [], newSlots: [], profileCompliant: [] };
   }
 
@@ -488,14 +482,8 @@ export function analyzeHourlyISF(
   );
 
   if (validISFSlots.length === 0) {
-    console.log("❌ No valid ISF slots found");
     return { modifications: [], newSlots: [], profileCompliant: [] };
   }
-
-  console.log("📋 Original ISF Profile:");
-  validISFSlots.forEach((slot, i) => {
-    console.log(`  ${i}: ${slot.time || slot.start} = ${slot.value} mg/dL/U`);
-  });
 
   // Create hourly ISF map
   const hourlyISFMap: number[] = new Array(24).fill(
@@ -526,16 +514,7 @@ export function analyzeHourlyISF(
   // Combine both types of analysis
   const allCorrections = [...correctionAnalyses, ...tempBasalAnalyses];
 
-  console.log(`🔬 Analysis Results:`);
-  console.log(`  📝 ${correctionAnalyses.length} correction boluses`);
-  console.log(`  🔄 ${tempBasalAnalyses.length} temp basal corrections`);
-  console.log(`  📊 ${allCorrections.length} total corrections`);
-
   const cleanCorrections = allCorrections.filter((c: any) => !c.nearbyMeal);
-  const mealContaminated = allCorrections.length - cleanCorrections.length;
-
-  console.log(`  ✅ ${cleanCorrections.length} clean corrections`);
-  console.log(`  🍽️ ${mealContaminated} meal-contaminated`);
 
   // NEW: Analyze ALL 24 hours, not just existing profile slots
   return analyzeAllHoursForISF(allCorrections, hourlyISFMap, validISFSlots);
@@ -956,6 +935,25 @@ export interface HourlyICRAdjustment {
   confidence: number;
   mealCount: number;
   successRate: number;
+  isNewSlot?: boolean; // True if this is a newly suggested time slot
+  isGroupedRecommendation?: boolean; // True if this represents multiple grouped hours
+  affectedHours?: number[]; // List of hours affected by this recommendation
+  isProfileCompliant?: boolean; // True if current ICR is already good (small change needed)
+}
+
+// ICR entry in profile
+interface ICREntry {
+  time?: string;
+  start?: string;
+  value: number;
+  hour?: number;
+}
+
+// Optimized ICR result structure
+interface OptimizedICRResult {
+  modifications: HourlyICRAdjustment[];
+  newSlots: HourlyICRAdjustment[];
+  profileCompliant: HourlyICRAdjustment[];
 }
 
 /**
@@ -1300,9 +1298,13 @@ export function analyzeHourlyICR(
   entries: any[],
   treatments: any[],
   profileICR: any[]
-): HourlyICRAdjustment[] {
+): {
+  modifications: HourlyICRAdjustment[];
+  newSlots: HourlyICRAdjustment[];
+  profileCompliant: HourlyICRAdjustment[];
+} {
   if (!profileICR || profileICR.length === 0) {
-    return [];
+    return { modifications: [], newSlots: [], profileCompliant: [] };
   }
 
   // Expand ICR profile to 24 hours
@@ -1326,7 +1328,10 @@ export function analyzeHourlyICR(
     adjustments.push(calculateHourlyAdjustment(hour, currentICR, mealsForHour));
   });
 
-  return adjustments.sort((a, b) => a.hour - b.hour);
+  // Apply similar optimization logic as ISF
+  const optimizedResults = optimizeICRTimeSlots(adjustments, profileICR);
+
+  return optimizedResults;
 }
 
 /**
@@ -1341,8 +1346,6 @@ function analyzeAllHoursForISF(
   newSlots: HourlyISFAdjustment[];
   profileCompliant: HourlyISFAdjustment[];
 } {
-  console.log("🕐 Analyzing ALL 24 hours for ISF optimization...");
-
   // Group corrections by actual hour they occurred
   const correctionsByHour: { [hour: number]: ISFAnalysis[] } = {};
 
@@ -1357,23 +1360,10 @@ function analyzeAllHoursForISF(
     correctionsByHour[hour].push(correction);
   });
 
-  console.log("📈 Corrections by hour:");
-  for (let h = 0; h < 24; h++) {
-    if (correctionsByHour[h].length > 0) {
-      console.log(
-        `  ${h.toString().padStart(2, "0")}:00 - ${
-          correctionsByHour[h].length
-        } corrections`
-      );
-    }
-  }
-
   const results: HourlyISFAdjustment[] = [];
   const existingSlotHours = existingSlots.map((slot) =>
     parseInt((slot.time || slot.start).split(":")[0])
   );
-
-  console.log("🎯 Existing ISF slots at hours:", existingSlotHours);
 
   // Analyze each hour
   for (let hour = 0; hour < 24; hour++) {
@@ -1384,26 +1374,15 @@ function analyzeAllHoursForISF(
     if (corrections.length === 0) continue; // Skip hours with no data
 
     const currentISF = hourlyISFMap[hour];
-    console.log(`\n🔍 Hour ${hour.toString().padStart(2, "0")}:00 analysis:`);
-    console.log(`  📊 ${corrections.length} clean corrections available`);
-    console.log(`  🎚️ Current ISF: ${currentISF} mg/dL/U`);
-
     const adjustment = calculateHourlyISFAdjustment(
       hour,
       currentISF,
       corrections
     );
 
-    console.log(`  ➡️ Suggested ISF: ${adjustment.suggestedISF} mg/dL/U`);
-    console.log(`  📈 Adjustment: ${adjustment.adjustmentPct}%`);
-    console.log(`  🎯 Confidence: ${adjustment.confidence}`);
-
     // Mark if this is a new suggested slot (not in existing profile)
     const isNewSlot = !existingSlotHours.includes(hour);
     const isSignificantChange = Math.abs(adjustment.adjustmentPct) >= 10; // 10%+ change
-
-    console.log(`  🆕 New slot: ${isNewSlot}`);
-    console.log(`  ⚡ Significant change: ${isSignificantChange}`);
 
     // Include in results if:
     // 1. Existing slot with any change
@@ -1418,28 +1397,16 @@ function analyzeAllHoursForISF(
       (isNewSlot && isSignificantChange && corrections.length >= 2) ||
       isProfileCompliant
     ) {
-      console.log(
-        `  ✅ INCLUDED in results ${
-          isProfileCompliant ? "(profile compliant)" : ""
-        }`
-      );
       results.push({
         ...adjustment,
         isNewSlot: isNewSlot,
         isProfileCompliant: isProfileCompliant,
       });
-    } else {
-      console.log(`  ❌ EXCLUDED from results`);
     }
   }
 
-  console.log(`\n🎯 Raw results: ${results.length} ISF recommendations`);
-
   // NEW: Intelligent grouping and split into modifications vs new slots
   const optimizedResults = optimizeISFTimeSlots(results, existingSlots);
-  console.log(
-    `🧠 After intelligent grouping: ${optimizedResults.modifications.length} modifications + ${optimizedResults.newSlots.length} new slots`
-  );
 
   return optimizedResults;
 }
@@ -1459,10 +1426,6 @@ function optimizeISFTimeSlots(
   if (results.length === 0)
     return { modifications: [], newSlots: [], profileCompliant: [] };
 
-  console.log(
-    "🧠 Creating complete profile view with separate modifications..."
-  );
-
   const modifications: HourlyISFAdjustment[] = [];
   const newSlots: HourlyISFAdjustment[] = [];
   const profileCompliant: HourlyISFAdjustment[] = [];
@@ -1471,7 +1434,6 @@ function optimizeISFTimeSlots(
   const needsOptimization = results.filter((r) => !r.isProfileCompliant);
   const compliantEntries = results.filter((r) => r.isProfileCompliant);
 
-  console.log(`🟢 ${compliantEntries.length} profile compliant entries found`);
   profileCompliant.push(...compliantEntries);
 
   // NEW APPROACH: Show each existing profile slot separately
@@ -1479,8 +1441,6 @@ function optimizeISFTimeSlots(
   const existingSlotHours = existingSlots.map((slot) =>
     parseInt((slot.time || slot.start).split(":")[0])
   );
-
-  console.log(`📋 Existing profile slots at: ${existingSlotHours.join(", ")}`);
 
   // For each existing slot, determine if it needs changes based on analysis results
   existingSlots.forEach((slot) => {
@@ -1499,12 +1459,6 @@ function optimizeISFTimeSlots(
     const problemsInRange = needsOptimization.filter((problem) => {
       return problem.hour >= slotHour && problem.hour < nextSlotHour;
     });
-
-    console.log(
-      `🔍 Slot ${slotHour}:00 (${currentISF}) covers hours ${slotHour}-${nextSlotHour}, problems: [${problemsInRange
-        .map((p) => p.hour)
-        .join(", ")}]`
-    );
 
     if (problemsInRange.length > 0) {
       // This slot needs modification - use the most confident suggestion
@@ -1564,16 +1518,136 @@ function optimizeISFTimeSlots(
     });
   });
 
-  console.log(
-    `➕ ${trulyNewProblems.length} truly new slots needed: [${trulyNewProblems
-      .map((p) => p.hour)
-      .join(", ")}]`
-  );
   newSlots.push(...trulyNewProblems);
 
-  console.log(
-    `✨ Complete profile view: ${modifications.length} modifications + ${newSlots.length} new slots + ${profileCompliant.length} profile compliant`
-  );
-
   return { modifications, newSlots, profileCompliant };
+}
+
+/**
+ * Optimizes ICR time slots by grouping similar adjacent recommendations
+ * Returns separate arrays for modifications and new slots
+ */
+function optimizeICRTimeSlots(
+  adjustments: HourlyICRAdjustment[],
+  profile: ICREntry[]
+): OptimizedICRResult {
+  const existingSlots: HourlyICRAdjustment[] = [];
+  const newSlots: HourlyICRAdjustment[] = [];
+  const compliantSlots: HourlyICRAdjustment[] = [];
+
+  adjustments.forEach((adj) => {
+    // Check if there's already a profile slot at this hour
+    const existingSlot = profile.find((slot) => {
+      const timeStr = slot.time || slot.start;
+      if (!timeStr) return false;
+      const slotHour = parseInt(timeStr.split(":")[0]);
+      return slotHour === adj.hour;
+    });
+
+    if (existingSlot) {
+      // Check if change is significant (>5% or low confidence)
+      const isSignificantChange =
+        Math.abs(adj.adjustmentPct) >= 5 && adj.confidence >= 0.3;
+
+      if (isSignificantChange) {
+        // Modification to existing slot
+        existingSlots.push({
+          ...adj,
+          isNewSlot: false,
+          isGroupedRecommendation: false,
+          affectedHours: [adj.hour],
+          isProfileCompliant: false,
+        });
+      } else {
+        // Existing slot is already compliant (small change or low confidence)
+        compliantSlots.push({
+          ...adj,
+          isNewSlot: false,
+          isGroupedRecommendation: false,
+          affectedHours: [adj.hour],
+          isProfileCompliant: true,
+          // Keep original values for compliant slots
+          suggestedICR: adj.currentICR,
+          adjustmentPct: 0,
+        });
+      }
+    } else {
+      // New slot suggestion (this shouldn't happen with current ICR logic, but keep for completeness)
+      if (adj.confidence >= 0.3 && Math.abs(adj.adjustmentPct) >= 10) {
+        newSlots.push({
+          ...adj,
+          isNewSlot: true,
+          isGroupedRecommendation: false,
+          affectedHours: [adj.hour],
+          isProfileCompliant: false,
+        });
+      }
+    }
+  });
+
+  return {
+    modifications: existingSlots,
+    newSlots: newSlots,
+    profileCompliant: compliantSlots,
+  };
+}
+
+// Group consecutive ICR slots with similar values
+function groupConsecutiveICRSlots(
+  slots: HourlyICRAdjustment[]
+): HourlyICRAdjustment[] {
+  if (slots.length <= 1) return slots;
+
+  const grouped: HourlyICRAdjustment[] = [];
+  let currentGroup = [slots[0]];
+
+  for (let i = 1; i < slots.length; i++) {
+    const current = slots[i];
+    const previous = slots[i - 1];
+
+    // Check if slots are consecutive and have similar values
+    const isConsecutive = current.hour === previous.hour + 1;
+    const isSimilarValue =
+      Math.abs(current.suggestedICR - previous.suggestedICR) < 0.5;
+
+    if (isConsecutive && isSimilarValue) {
+      currentGroup.push(current);
+    } else {
+      // Finalize current group and start new one
+      if (currentGroup.length > 1) {
+        // Create grouped recommendation
+        const avgValue =
+          currentGroup.reduce((sum, slot) => sum + slot.suggestedICR, 0) /
+          currentGroup.length;
+        const representativeSlot: HourlyICRAdjustment = {
+          ...currentGroup[0],
+          suggestedICR: Math.round(avgValue * 10) / 10,
+          isGroupedRecommendation: true,
+          affectedHours: currentGroup.map((slot) => slot.hour),
+        };
+        grouped.push(representativeSlot);
+      } else {
+        grouped.push(currentGroup[0]);
+      }
+      currentGroup = [current];
+    }
+  }
+
+  // Handle last group
+  if (currentGroup.length > 1) {
+    const avgValue =
+      currentGroup.reduce((sum, slot) => sum + slot.suggestedICR, 0) /
+      currentGroup.length;
+    const representativeSlot: HourlyICRAdjustment = {
+      ...currentGroup[0],
+      suggestedICR: Math.round(avgValue * 10) / 10,
+      isGroupedRecommendation: true,
+      affectedHours: currentGroup.map((slot) => slot.hour),
+    };
+    grouped.push(representativeSlot);
+  } else {
+    grouped.push(currentGroup[0]);
+  }
+
+  return grouped;
 }

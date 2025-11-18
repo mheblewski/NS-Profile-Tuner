@@ -25,7 +25,11 @@ export interface AnalysisResult {
   basalAdj: number[];
   icrPct: number;
   isfPct: number;
-  hourlyICRAdjustments: HourlyICRAdjustment[];
+  hourlyICRAdjustments: {
+    modifications: HourlyICRAdjustment[];
+    newSlots: HourlyICRAdjustment[];
+    profileCompliant: HourlyICRAdjustment[];
+  };
   hourlyISFAdjustments: {
     modifications: HourlyISFAdjustment[];
     newSlots: HourlyISFAdjustment[];
@@ -70,6 +74,28 @@ export async function performAnalysis(
     profileForICR.icr || []
   );
 
+  // Mark hourly ICR adjustments for UI display
+  hourlyICRAdjustments.modifications.forEach((adj) => {
+    adj.isNewSlot = false;
+    adj.isGroupedRecommendation = false;
+    adj.affectedHours = [adj.hour];
+    adj.isProfileCompliant = false;
+  });
+
+  hourlyICRAdjustments.newSlots.forEach((adj) => {
+    adj.isNewSlot = true;
+    adj.isGroupedRecommendation = false;
+    adj.affectedHours = [adj.hour];
+    adj.isProfileCompliant = false;
+  });
+
+  hourlyICRAdjustments.profileCompliant.forEach((adj) => {
+    adj.isNewSlot = false;
+    adj.isGroupedRecommendation = false;
+    adj.affectedHours = [adj.hour];
+    adj.isProfileCompliant = true;
+  });
+
   // Analyze hourly ISF effectiveness
   const hourlyISFAdjustments = analyzeHourlyISF(
     entries,
@@ -86,10 +112,14 @@ export async function performAnalysis(
   );
 
   // Apply hourly ICR adjustments (replace the old ICR with new smart one)
-  if (hourlyICRAdjustments.length > 0) {
+  const totalICRAdjustments = [
+    ...hourlyICRAdjustments.modifications,
+    ...hourlyICRAdjustments.newSlots,
+  ];
+  if (totalICRAdjustments.length > 0) {
     adjustments.newICR = applyHourlyICRAdjustments(
       profileForICR,
-      hourlyICRAdjustments
+      totalICRAdjustments
     );
   }
 
@@ -141,10 +171,10 @@ export async function performAnalysis(
 
   // Validate recommendations for conflicts
   let validation;
-  if (hourlyICRAdjustments.length > 0) {
+  if (totalICRAdjustments.length > 0) {
     const validationResult = validateProfileRecommendations(
       basalAdj,
-      hourlyICRAdjustments,
+      totalICRAdjustments,
       entries
     );
 

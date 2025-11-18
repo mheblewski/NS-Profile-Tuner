@@ -40,13 +40,20 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                 </tr>
               </thead>
               <tbody>
-                {/* Show profile compliant slots first (sorted by hour) */}
-                {isfStructuredData.profileCompliant
-                  ?.sort((a, b) => a.hour - b.hour)
+                {/* Combine and sort all existing slots by hour */}
+                {[
+                  ...(isfStructuredData.profileCompliant || []),
+                  ...(isfStructuredData.modifications || []),
+                ]
+                  .sort((a, b) => a.hour - b.hour)
                   .map((s, i) => (
                     <tr
-                      key={`compliant-${i}`}
-                      className="hover:bg-gray-100 transition-colors duration-150"
+                      key={i}
+                      className={`hover:bg-gray-100 transition-colors duration-150 ${
+                        s.isProfileCompliant
+                          ? ""
+                          : "bg-yellow-50 hover:bg-yellow-100"
+                      }`}
                     >
                       <td className="p-2 text-center">
                         {String(s.hour).padStart(2, "0")}:00
@@ -55,32 +62,7 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                       <td className="p-2 text-center font-medium">
                         {s.suggestedISF}
                       </td>
-                      <td className="p-2 text-center">
-                        {s.adjustmentPct > 0 ? "+" : ""}
-                        {s.adjustmentPct}%
-                      </td>
-                    </tr>
-                  ))}
-
-                {/* Show modifications (sorted by hour) */}
-                {isfStructuredData.modifications
-                  ?.sort((a, b) => a.hour - b.hour)
-                  .map((s, i) => (
-                    <tr
-                      key={`mod-${i}`}
-                      className="hover:bg-yellow-100 transition-colors duration-150 bg-yellow-50"
-                    >
-                      <td className="p-2 text-center">
-                        {String(s.hour).padStart(2, "0")}:00
-                      </td>
-                      <td className="p-2 text-center">{s.currentISF}</td>
-                      <td className="p-2 text-center font-medium">
-                        {s.suggestedISF}
-                      </td>
-                      <td className="p-2 text-center">
-                        {s.adjustmentPct > 0 ? "+" : ""}
-                        {s.adjustmentPct}%
-                      </td>
+                      <td className="p-2 text-center">{s.adjustmentPct}%</td>
                     </tr>
                   ))}
               </tbody>
@@ -107,32 +89,31 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                 </tr>
               </thead>
               <tbody>
-                {isfStructuredData.newSlots.map((s, i) => (
-                  <tr
-                    key={i}
-                    className="hover:bg-slate-100 transition-colors duration-150 bg-slate-50"
-                  >
-                    <td className="p-2 text-center">
-                      {String(s.hour).padStart(2, "0")}:00
-                      {s.isGroupedRecommendation && s.affectedHours && (
-                        <div className="text-xs text-gray-600 mt-1">
-                          Wpływa na:{" "}
-                          {s.affectedHours
-                            .map((h) => `${h.toString().padStart(2, "0")}:00`)
-                            .join(", ")}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-2 text-center">{s.currentISF}</td>
-                    <td className="p-2 text-center font-medium">
-                      {s.suggestedISF}
-                    </td>
-                    <td className="p-2 text-center">
-                      {s.adjustmentPct > 0 ? "+" : ""}
-                      {s.adjustmentPct}%
-                    </td>
-                  </tr>
-                ))}
+                {isfStructuredData.newSlots
+                  .sort((a, b) => a.hour - b.hour)
+                  .map((s, i) => (
+                    <tr
+                      key={i}
+                      className="hover:bg-slate-100 transition-colors duration-150 bg-slate-50"
+                    >
+                      <td className="p-2 text-center">
+                        {String(s.hour).padStart(2, "0")}:00
+                        {s.isGroupedRecommendation && s.affectedHours && (
+                          <div className="text-xs text-gray-600 mt-1">
+                            Wpływa na:{" "}
+                            {s.affectedHours
+                              .map((h) => `${h.toString().padStart(2, "0")}:00`)
+                              .join(", ")}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-2 text-center">{s.currentISF}</td>
+                      <td className="p-2 text-center font-medium">
+                        {s.suggestedISF}
+                      </td>
+                      <td className="p-2 text-center">{s.adjustmentPct}%</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </section>
