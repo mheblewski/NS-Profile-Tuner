@@ -170,7 +170,7 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
   return (
     <section className="p-4 border rounded bg-white">
       <h3 className="font-semibold mb-4">Godzinowe średnie glikemie</h3>
-      <div style={{ height: "400px", width: "100%" }}>
+      <div style={{ height: "300px", width: "100%" }}>
         <Line data={chartData} options={options} />
       </div>
 

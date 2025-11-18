@@ -13,9 +13,9 @@ export default function ActionButtons({
   const isDisabled = isLoading || !canSubmit;
 
   return (
-    <div className="flex gap-2 mb-4">
+    <div className="flex flex-col md:flex-row gap-2 mb-4">
       <button
-        className={`px-4 py-2 rounded transition-colors duration-200 ${
+        className={`px-4 py-3 md:py-2 text-sm rounded transition-colors duration-200 md:flex-1 ${
           isDisabled
             ? "bg-gray-300 text-gray-500 cursor-not-allowed"
             : "bg-green-600 text-white hover:bg-green-700"
@@ -28,7 +28,7 @@ export default function ActionButtons({
 
       {hasResult && (
         <button
-          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors duration-200"
+          className="px-4 py-3 md:py-2 text-sm bg-gray-200 rounded hover:bg-gray-300 transition-colors duration-200 md:w-32"
           onClick={onClear}
         >
           Wyczyść

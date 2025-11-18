@@ -33,14 +33,19 @@ export default function NSProfileTuner({ defaultDays = 3 }) {
       style={{
         background: "#FAFAFA",
         color: "#000000",
-        height: "100%",
-        padding: "24px",
         border: "1px solid #ccc",
-        minWidth: "30rem",
+        ...(result
+          ? {
+              maxWidth: "95vw",
+            }
+          : {
+              maxWidth: "700px",
+              width: "90vw",
+            }),
       }}
-      className="max-w-4xl mx-auto"
+      className="mx-auto p-4"
     >
-      <h1 className="text-2xl font-bold mb-4">NS Profile Tuner</h1>
+      <h1 className="text-xl font-bold mb-4">NS Profile Tuner</h1>
 
       <ConfigurationForm
         apiUrl={apiUrl}
