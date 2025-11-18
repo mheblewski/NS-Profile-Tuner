@@ -16,6 +16,7 @@ import {
   parseLoopProfile,
   applyAdjustmentsToProfile,
   applyHourlyICRAdjustments,
+  applyHourlyISFAdjustments,
   type ProfileAdjustments,
 } from "./profileUtils";
 
@@ -25,7 +26,11 @@ export interface AnalysisResult {
   icrPct: number;
   isfPct: number;
   hourlyICRAdjustments: HourlyICRAdjustment[];
-  hourlyISFAdjustments: HourlyISFAdjustment[];
+  hourlyISFAdjustments: {
+    modifications: HourlyISFAdjustment[];
+    newSlots: HourlyISFAdjustment[];
+    profileCompliant: HourlyISFAdjustment[];
+  };
   adjustments: ProfileAdjustments;
   basalStep: number;
   validation?: {
@@ -86,6 +91,52 @@ export async function performAnalysis(
       profileForICR,
       hourlyICRAdjustments
     );
+  }
+
+  // Apply hourly ISF adjustments (replace the old ISF with new smart one)
+  if (
+    hourlyISFAdjustments.modifications.length > 0 ||
+    hourlyISFAdjustments.newSlots.length > 0 ||
+    hourlyISFAdjustments.profileCompliant.length > 0
+  ) {
+    // Convert modifications with proper marking
+    const modificationsConverted = applyHourlyISFAdjustments(
+      profileForICR,
+      hourlyISFAdjustments.modifications
+    ).map((item) => ({
+      ...item,
+      isModification: true,
+      isNewSlot: false,
+      isProfileCompliant: false,
+    }));
+
+    // Convert new slots with proper marking
+    const newSlotsConverted = applyHourlyISFAdjustments(
+      profileForICR,
+      hourlyISFAdjustments.newSlots
+    ).map((item) => ({
+      ...item,
+      isModification: false,
+      isNewSlot: true,
+      isProfileCompliant: false,
+    }));
+
+    // Convert profile compliant with proper marking
+    const profileCompliantConverted = applyHourlyISFAdjustments(
+      profileForICR,
+      hourlyISFAdjustments.profileCompliant
+    ).map((item) => ({
+      ...item,
+      isModification: false,
+      isNewSlot: false,
+      isProfileCompliant: true,
+    }));
+
+    adjustments.newSens = [
+      ...modificationsConverted,
+      ...newSlotsConverted,
+      ...profileCompliantConverted,
+    ];
   }
 
   // Validate recommendations for conflicts

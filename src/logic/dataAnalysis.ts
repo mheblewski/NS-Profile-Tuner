@@ -453,6 +453,10 @@ export interface HourlyISFAdjustment {
   correctionCount: number;
   avgEfficiency: number; // Average efficiency of corrections
   successRate: number;
+  isNewSlot?: boolean; // True if this is a newly suggested time slot
+  isGroupedRecommendation?: boolean; // True if this represents multiple grouped hours
+  affectedHours?: number[]; // List of hours affected by this recommendation
+  isProfileCompliant?: boolean; // True if current ISF is already good (small change needed)
 }
 
 /**
@@ -462,10 +466,20 @@ export function analyzeHourlyISF(
   entries: any[],
   treatments: any[],
   profileISF: any[]
-): HourlyISFAdjustment[] {
+): {
+  modifications: HourlyISFAdjustment[];
+  newSlots: HourlyISFAdjustment[];
+  profileCompliant: HourlyISFAdjustment[];
+} {
+  console.log("🔍 ISF Analysis - FULL DEBUG MODE");
+  console.log(
+    `📊 Processing ${entries.length} entries and ${treatments.length} treatments`
+  );
+
   // Safety check for profile ISF
   if (!profileISF || profileISF.length === 0) {
-    return [];
+    console.log("❌ No ISF profile provided");
+    return { modifications: [], newSlots: [], profileCompliant: [] };
   }
 
   // Validate ISF profile structure
@@ -474,8 +488,14 @@ export function analyzeHourlyISF(
   );
 
   if (validISFSlots.length === 0) {
-    return [];
+    console.log("❌ No valid ISF slots found");
+    return { modifications: [], newSlots: [], profileCompliant: [] };
   }
+
+  console.log("📋 Original ISF Profile:");
+  validISFSlots.forEach((slot, i) => {
+    console.log(`  ${i}: ${slot.time || slot.start} = ${slot.value} mg/dL/U`);
+  });
 
   // Create hourly ISF map
   const hourlyISFMap: number[] = new Array(24).fill(
@@ -506,20 +526,19 @@ export function analyzeHourlyISF(
   // Combine both types of analysis
   const allCorrections = [...correctionAnalyses, ...tempBasalAnalyses];
 
+  console.log(`🔬 Analysis Results:`);
+  console.log(`  📝 ${correctionAnalyses.length} correction boluses`);
+  console.log(`  🔄 ${tempBasalAnalyses.length} temp basal corrections`);
+  console.log(`  📊 ${allCorrections.length} total corrections`);
+
   const cleanCorrections = allCorrections.filter((c: any) => !c.nearbyMeal);
   const mealContaminated = allCorrections.length - cleanCorrections.length;
 
-  // Group by ISF hour (not correction hour!)
-  const groupsByISFHour = groupCorrectionsByISFHour(
-    allCorrections,
-    validISFSlots
-  );
+  console.log(`  ✅ ${cleanCorrections.length} clean corrections`);
+  console.log(`  🍽️ ${mealContaminated} meal-contaminated`);
 
-  return Object.entries(groupsByISFHour).map(([hourStr, corrections]) => {
-    const hour = parseInt(hourStr);
-    const currentISF = hourlyISFMap[hour];
-    return calculateHourlyISFAdjustment(hour, currentISF, corrections);
-  });
+  // NEW: Analyze ALL 24 hours, not just existing profile slots
+  return analyzeAllHoursForISF(allCorrections, hourlyISFMap, validISFSlots);
 }
 
 /**
@@ -1308,4 +1327,253 @@ export function analyzeHourlyICR(
   });
 
   return adjustments.sort((a, b) => a.hour - b.hour);
+}
+
+/**
+ * Analyzes ALL 24 hours for ISF optimization, detecting new time slots needed
+ */
+function analyzeAllHoursForISF(
+  allCorrections: ISFAnalysis[],
+  hourlyISFMap: number[],
+  existingSlots: any[]
+): {
+  modifications: HourlyISFAdjustment[];
+  newSlots: HourlyISFAdjustment[];
+  profileCompliant: HourlyISFAdjustment[];
+} {
+  console.log("🕐 Analyzing ALL 24 hours for ISF optimization...");
+
+  // Group corrections by actual hour they occurred
+  const correctionsByHour: { [hour: number]: ISFAnalysis[] } = {};
+
+  // Initialize all 24 hours
+  for (let h = 0; h < 24; h++) {
+    correctionsByHour[h] = [];
+  }
+
+  // Group corrections by hour
+  allCorrections.forEach((correction) => {
+    const hour = correction.hour;
+    correctionsByHour[hour].push(correction);
+  });
+
+  console.log("📈 Corrections by hour:");
+  for (let h = 0; h < 24; h++) {
+    if (correctionsByHour[h].length > 0) {
+      console.log(
+        `  ${h.toString().padStart(2, "0")}:00 - ${
+          correctionsByHour[h].length
+        } corrections`
+      );
+    }
+  }
+
+  const results: HourlyISFAdjustment[] = [];
+  const existingSlotHours = existingSlots.map((slot) =>
+    parseInt((slot.time || slot.start).split(":")[0])
+  );
+
+  console.log("🎯 Existing ISF slots at hours:", existingSlotHours);
+
+  // Analyze each hour
+  for (let hour = 0; hour < 24; hour++) {
+    const corrections = correctionsByHour[hour].filter(
+      (c: any) => !c.nearbyMeal
+    );
+
+    if (corrections.length === 0) continue; // Skip hours with no data
+
+    const currentISF = hourlyISFMap[hour];
+    console.log(`\n🔍 Hour ${hour.toString().padStart(2, "0")}:00 analysis:`);
+    console.log(`  📊 ${corrections.length} clean corrections available`);
+    console.log(`  🎚️ Current ISF: ${currentISF} mg/dL/U`);
+
+    const adjustment = calculateHourlyISFAdjustment(
+      hour,
+      currentISF,
+      corrections
+    );
+
+    console.log(`  ➡️ Suggested ISF: ${adjustment.suggestedISF} mg/dL/U`);
+    console.log(`  📈 Adjustment: ${adjustment.adjustmentPct}%`);
+    console.log(`  🎯 Confidence: ${adjustment.confidence}`);
+
+    // Mark if this is a new suggested slot (not in existing profile)
+    const isNewSlot = !existingSlotHours.includes(hour);
+    const isSignificantChange = Math.abs(adjustment.adjustmentPct) >= 10; // 10%+ change
+
+    console.log(`  🆕 New slot: ${isNewSlot}`);
+    console.log(`  ⚡ Significant change: ${isSignificantChange}`);
+
+    // Include in results if:
+    // 1. Existing slot with any change
+    // 2. New slot with significant change needed
+    // 3. Existing slot with small change (mark as "profile compliant")
+
+    const isProfileCompliant =
+      !isNewSlot && !isSignificantChange && corrections.length >= 2;
+
+    if (
+      !isNewSlot ||
+      (isNewSlot && isSignificantChange && corrections.length >= 2) ||
+      isProfileCompliant
+    ) {
+      console.log(
+        `  ✅ INCLUDED in results ${
+          isProfileCompliant ? "(profile compliant)" : ""
+        }`
+      );
+      results.push({
+        ...adjustment,
+        isNewSlot: isNewSlot,
+        isProfileCompliant: isProfileCompliant,
+      });
+    } else {
+      console.log(`  ❌ EXCLUDED from results`);
+    }
+  }
+
+  console.log(`\n🎯 Raw results: ${results.length} ISF recommendations`);
+
+  // NEW: Intelligent grouping and split into modifications vs new slots
+  const optimizedResults = optimizeISFTimeSlots(results, existingSlots);
+  console.log(
+    `🧠 After intelligent grouping: ${optimizedResults.modifications.length} modifications + ${optimizedResults.newSlots.length} new slots`
+  );
+
+  return optimizedResults;
+}
+
+/**
+ * Optimizes ISF time slots by grouping similar adjacent recommendations
+ * Returns separate arrays for modifications and new slots
+ */
+function optimizeISFTimeSlots(
+  results: HourlyISFAdjustment[],
+  existingSlots: any[]
+): {
+  modifications: HourlyISFAdjustment[];
+  newSlots: HourlyISFAdjustment[];
+  profileCompliant: HourlyISFAdjustment[];
+} {
+  if (results.length === 0)
+    return { modifications: [], newSlots: [], profileCompliant: [] };
+
+  console.log(
+    "🧠 Creating complete profile view with separate modifications..."
+  );
+
+  const modifications: HourlyISFAdjustment[] = [];
+  const newSlots: HourlyISFAdjustment[] = [];
+  const profileCompliant: HourlyISFAdjustment[] = [];
+
+  // Extract profile compliant entries
+  const needsOptimization = results.filter((r) => !r.isProfileCompliant);
+  const compliantEntries = results.filter((r) => r.isProfileCompliant);
+
+  console.log(`🟢 ${compliantEntries.length} profile compliant entries found`);
+  profileCompliant.push(...compliantEntries);
+
+  // NEW APPROACH: Show each existing profile slot separately
+  // Create a mapping of which problems affect which existing slots
+  const existingSlotHours = existingSlots.map((slot) =>
+    parseInt((slot.time || slot.start).split(":")[0])
+  );
+
+  console.log(`📋 Existing profile slots at: ${existingSlotHours.join(", ")}`);
+
+  // For each existing slot, determine if it needs changes based on analysis results
+  existingSlots.forEach((slot) => {
+    const slotHour = parseInt((slot.time || slot.start).split(":")[0]);
+    const currentISF = slot.value;
+
+    // Find analysis results that would be covered by this slot
+    // (problems that occur after this slot time but before next slot)
+    const nextSlotHour =
+      existingSlots
+        .map((s) => parseInt((s.time || s.start).split(":")[0]))
+        .filter((h) => h > slotHour)
+        .sort((a, b) => a - b)[0] || 24; // Next slot or end of day
+
+    // Find problems in the range covered by this slot
+    const problemsInRange = needsOptimization.filter((problem) => {
+      return problem.hour >= slotHour && problem.hour < nextSlotHour;
+    });
+
+    console.log(
+      `🔍 Slot ${slotHour}:00 (${currentISF}) covers hours ${slotHour}-${nextSlotHour}, problems: [${problemsInRange
+        .map((p) => p.hour)
+        .join(", ")}]`
+    );
+
+    if (problemsInRange.length > 0) {
+      // This slot needs modification - use the most confident suggestion
+      const bestProblem = problemsInRange.reduce((best, current) =>
+        current.confidence > best.confidence ? current : best
+      );
+
+      modifications.push({
+        hour: slotHour,
+        currentISF: currentISF,
+        suggestedISF: bestProblem.suggestedISF,
+        adjustmentPct: Math.round(
+          ((bestProblem.suggestedISF - currentISF) / currentISF) * 100
+        ),
+        confidence: bestProblem.confidence,
+        correctionCount: problemsInRange.reduce(
+          (sum, p) => sum + p.correctionCount,
+          0
+        ),
+        avgEfficiency:
+          problemsInRange.reduce((sum, p) => sum + p.avgEfficiency, 0) /
+          problemsInRange.length,
+        successRate:
+          problemsInRange.reduce((sum, p) => sum + p.successRate, 0) /
+          problemsInRange.length,
+        isNewSlot: false,
+        isGroupedRecommendation: problemsInRange.length > 1,
+        affectedHours: problemsInRange.map((p) => p.hour),
+      });
+    } else {
+      // This slot is fine as is
+      profileCompliant.push({
+        hour: slotHour,
+        currentISF: currentISF,
+        suggestedISF: currentISF,
+        adjustmentPct: 0,
+        confidence: 1.0,
+        correctionCount: 0,
+        avgEfficiency: 1.0,
+        successRate: 1.0,
+        isNewSlot: false,
+        isProfileCompliant: true,
+      });
+    }
+  });
+
+  // Add truly new slots (hours not covered by any existing slot)
+  const trulyNewProblems = needsOptimization.filter((problem) => {
+    return !existingSlots.some((slot) => {
+      const slotHour = parseInt((slot.time || slot.start).split(":")[0]);
+      const nextSlotHour =
+        existingSlots
+          .map((s) => parseInt((s.time || s.start).split(":")[0]))
+          .filter((h) => h > slotHour)
+          .sort((a, b) => a - b)[0] || 24;
+      return problem.hour >= slotHour && problem.hour < nextSlotHour;
+    });
+  });
+
+  console.log(
+    `➕ ${trulyNewProblems.length} truly new slots needed: [${trulyNewProblems
+      .map((p) => p.hour)
+      .join(", ")}]`
+  );
+  newSlots.push(...trulyNewProblems);
+
+  console.log(
+    `✨ Complete profile view: ${modifications.length} modifications + ${newSlots.length} new slots + ${profileCompliant.length} profile compliant`
+  );
+
+  return { modifications, newSlots, profileCompliant };
 }

@@ -20,8 +20,8 @@ export default function ICRComparisonTable({ icrData }) {
         <thead className="bg-gray-100">
           <tr>
             <th className="p-2 text-center">Godzina</th>
-            <th className="p-2 text-center">Stare (g/U)</th>
-            <th className="p-2 text-center">Nowe (g/U)</th>
+            <th className="p-2 text-center">Aktualne (g/U)</th>
+            <th className="p-2 text-center">Sugerowane (g/U)</th>
             <th className="p-2 text-center">Δ%</th>
             <th className="p-2 text-center">U/WW</th>
             <th className="p-2 text-center hidden">Pewność</th>

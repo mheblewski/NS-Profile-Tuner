@@ -20,7 +20,10 @@ export default function ResultsDisplay({ result }) {
 
       <ICRComparisonTable icrData={result.adjustments.newICR} />
 
-      <ISFComparisonTable isfData={result.adjustments.newSens} />
+      <ISFComparisonTable
+        isfData={result.adjustments.newSens}
+        isfStructuredData={result.hourlyISFAdjustments}
+      />
 
       <HourlyGlucoseDisplay hourlyAvg={result.hourlyAvg} />
 

@@ -18,8 +18,8 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
             <thead>
               <tr className="bg-gray-100">
                 <th className="p-2 text-center">Godzina</th>
-                <th className="p-2 text-center">Stare (U/h)</th>
-                <th className="p-2 text-center">Nowe (U/h)</th>
+                <th className="p-2 text-center">Aktualne (U/h)</th>
+                <th className="p-2 text-center">Sugerowane (U/h)</th>
                 <th className="p-2 text-center">Δ</th>
               </tr>
             </thead>

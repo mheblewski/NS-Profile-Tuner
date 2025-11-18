@@ -2,7 +2,10 @@
  * Functions for handling profile parsing and adjustments
  */
 
-import { type HourlyICRAdjustment } from "./dataAnalysis";
+import {
+  type HourlyICRAdjustment,
+  type HourlyISFAdjustment,
+} from "./dataAnalysis";
 
 export interface ProfileAdjustments {
   newBasal: Array<{
@@ -251,6 +254,49 @@ export function applyHourlyICRAdjustments(
       successRate,
       oldUperWW: Number((10 / oldVal).toFixed(2)),
       newUperWW: Number((10 / newVal).toFixed(2)),
+    };
+  });
+}
+
+/**
+ * Applies hourly ISF adjustments based on correction outcomes, including new time slots
+ */
+export function applyHourlyISFAdjustments(
+  profileObj: any,
+  hourlyAdjustments: HourlyISFAdjustment[]
+): Array<{
+  time: string;
+  old: number;
+  new: number;
+  pct: number;
+  confidence: number;
+  correctionCount: number;
+  successRate: number;
+  isNewSlot?: boolean;
+}> {
+  if (!hourlyAdjustments || hourlyAdjustments.length === 0) {
+    return [];
+  }
+
+  // Get existing ISF profile for reference
+  const existingISF =
+    profileObj?.isf || profileObj?.sens || profileObj?.sensitivity || [];
+
+  return hourlyAdjustments.map((adjustment) => {
+    const timeStr = `${adjustment.hour.toString().padStart(2, "0")}:00`;
+
+    return {
+      time: timeStr,
+      old: adjustment.currentISF,
+      new: adjustment.suggestedISF,
+      pct: adjustment.adjustmentPct,
+      confidence: adjustment.confidence,
+      correctionCount: adjustment.correctionCount,
+      successRate: adjustment.successRate,
+      isNewSlot: adjustment.isNewSlot || false,
+      isGroupedRecommendation: adjustment.isGroupedRecommendation || false,
+      affectedHours: adjustment.affectedHours || [],
+      isProfileCompliant: adjustment.isProfileCompliant || false,
     };
   });
 }
