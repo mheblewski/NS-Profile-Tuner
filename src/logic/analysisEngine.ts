@@ -7,6 +7,7 @@ import {
   computeBasalAdjustments,
   analyzeTreatments,
   analyzeHourlyICR,
+  validateProfileRecommendations,
   type HourlyICRAdjustment,
 } from "./dataAnalysis";
 import {
@@ -24,6 +25,11 @@ export interface AnalysisResult {
   hourlyICRAdjustments: HourlyICRAdjustment[];
   adjustments: ProfileAdjustments;
   basalStep: number;
+  validation?: {
+    conflicts: any[];
+    overallCoherence: number;
+    hasSignificantConflicts: boolean;
+  };
 }
 
 /**
@@ -37,7 +43,7 @@ export async function performAnalysis(
 ): Promise<AnalysisResult> {
   // Calculate hourly averages and basal adjustments
   const hourlyAvg = hourlyAverage(entries);
-  const basalAdj = computeBasalAdjustments(hourlyAvg);
+  const basalAdj = computeBasalAdjustments(hourlyAvg, entries, treatments);
 
   // Analyze treatments for ICR and ISF adjustments
   const { icrPct, isfPct } = analyzeTreatments(treatments);
@@ -72,6 +78,26 @@ export async function performAnalysis(
     );
   }
 
+  // Validate recommendations for conflicts
+  let validation;
+  if (hourlyICRAdjustments.length > 0) {
+    const validationResult = validateProfileRecommendations(
+      basalAdj,
+      hourlyICRAdjustments,
+      entries
+    );
+
+    validation = {
+      ...validationResult,
+      hasSignificantConflicts: validationResult.conflicts.some(
+        (c) =>
+          c.conflictSeverity === "high" ||
+          Math.abs(c.basalChange) > 20 ||
+          Math.abs(c.icrChange) > 20
+      ),
+    };
+  }
+
   return {
     hourlyAvg,
     basalAdj,
@@ -80,5 +106,6 @@ export async function performAnalysis(
     hourlyICRAdjustments,
     adjustments,
     basalStep,
+    validation,
   };
 }
