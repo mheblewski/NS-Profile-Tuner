@@ -19,6 +19,7 @@ export interface AnalysisResult {
   icrPct: number;
   isfPct: number;
   adjustments: ProfileAdjustments;
+  basalStep: number;
 }
 
 /**
@@ -27,7 +28,8 @@ export interface AnalysisResult {
 export async function performAnalysis(
   entries: any[],
   treatments: any[],
-  profile: any
+  profile: any,
+  basalStep: number = 0.05
 ): Promise<AnalysisResult> {
   // Calculate hourly averages and basal adjustments
   const hourlyAvg = hourlyAverage(entries);
@@ -46,7 +48,8 @@ export async function performAnalysis(
     parsedProfile || profile || {},
     basalAdj,
     icrPct,
-    isfPct
+    isfPct,
+    basalStep
   );
 
   return {
@@ -55,5 +58,6 @@ export async function performAnalysis(
     icrPct,
     isfPct,
     adjustments,
+    basalStep,
   };
 }

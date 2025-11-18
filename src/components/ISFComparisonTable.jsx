@@ -6,23 +6,28 @@ import React from "react";
 export default function ISFComparisonTable({ isfData }) {
   return (
     <section className="p-4 border rounded bg-white">
-      <h3 className="font-semibold mb-2">ISF (sensitivity) — porównanie</h3>
+      <h3 className="font-semibold mb-2">Profil ISF</h3>
       <table className="w-full table-auto text-sm">
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-2">Time</th>
-            <th className="p-2">Old (mg/dL/U)</th>
-            <th className="p-2">New (mg/dL/U)</th>
-            <th className="p-2">Δ%</th>
+            <th className="p-2 text-center">Godzina</th>
+            <th className="p-2 text-center">Stare (mg/dL/U)</th>
+            <th className="p-2 text-center">Nowe (mg/dL/U)</th>
+            <th className="p-2 text-center">Δ%</th>
           </tr>
         </thead>
         <tbody>
           {isfData.map((s, i) => (
-            <tr key={i} className={s.pct ? "bg-yellow-50" : ""}>
-              <td className="p-2">{s.time}</td>
-              <td className="p-2">{s.old}</td>
-              <td className="p-2 font-medium">{s.new}</td>
-              <td className="p-2">{s.pct}%</td>
+            <tr
+              key={i}
+              className={`hover:bg-gray-100 transition-colors duration-150 ${
+                s.pct ? "bg-yellow-50 hover:bg-yellow-100" : ""
+              }`}
+            >
+              <td className="p-2 text-center">{s.time}</td>
+              <td className="p-2 text-center">{s.old}</td>
+              <td className="p-2 text-center font-medium">{s.new}</td>
+              <td className="p-2 text-center">{s.pct}%</td>
             </tr>
           ))}
         </tbody>

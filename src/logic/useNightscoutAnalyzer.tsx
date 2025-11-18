@@ -24,7 +24,10 @@ export function useNightscoutAnalyzer(defaultDays: number = 3) {
       );
 
       // Run analysis
-      const analysisResult = await analysis.runAnalysis(fetchResult);
+      const analysisResult = await analysis.runAnalysis({
+        ...fetchResult,
+        basalStep: configuration.basalStep,
+      });
 
       return analysisResult;
     } catch (err) {

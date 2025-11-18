@@ -10,6 +10,7 @@ export interface AnalysisData {
   entries: any;
   treatments: any;
   profile: any;
+  basalStep?: number;
 }
 
 /**
@@ -31,7 +32,8 @@ export function useAnalysis() {
       const analysisResult = await performAnalysis(
         data.entries,
         data.treatments,
-        data.profile
+        data.profile,
+        data.basalStep || 0.05
       );
 
       setResult(analysisResult);

@@ -8,12 +8,15 @@ import ResultActions from "./ResultActions";
 /**
  * Component that displays all analysis results
  */
-export default function ResultsDisplay({ result, onHideResult }) {
+export default function ResultsDisplay({ result }) {
   if (!result) return null;
 
   return (
     <div className="space-y-6">
-      <BasalComparisonTable basalData={result.adjustments.newBasal} />
+      <BasalComparisonTable
+        basalData={result.adjustments.newBasal}
+        basalStep={result.basalStep}
+      />
 
       <ICRComparisonTable icrData={result.adjustments.newICR} />
 
@@ -21,7 +24,7 @@ export default function ResultsDisplay({ result, onHideResult }) {
 
       <HourlyGlucoseDisplay hourlyAvg={result.hourlyAvg} />
 
-      <ResultActions result={result} onHideResult={onHideResult} />
+      <ResultActions result={result} />
     </div>
   );
 }

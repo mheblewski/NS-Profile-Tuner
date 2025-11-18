@@ -14,6 +14,9 @@ export default function NSProfileTuner({ defaultDays = 3 }) {
     setToken,
     days,
     setDays,
+    basalStep,
+    setBasalStep,
+    canSubmit,
 
     // State
     result,
@@ -28,11 +31,12 @@ export default function NSProfileTuner({ defaultDays = 3 }) {
   return (
     <div
       style={{
-        background: "#FFFFFA",
+        background: "#FAFAFA",
         color: "#000000",
         height: "100%",
         padding: "24px",
         border: "1px solid #ccc",
+        minWidth: "30rem",
       }}
       className="max-w-4xl mx-auto"
     >
@@ -45,18 +49,21 @@ export default function NSProfileTuner({ defaultDays = 3 }) {
         setToken={setToken}
         days={days}
         setDays={setDays}
+        basalStep={basalStep}
+        setBasalStep={setBasalStep}
       />
 
       <ActionButtons
         onAnalyze={analyzeAndBuild}
         onClear={clearAll}
         isLoading={isLoading}
-        apiUrl={apiUrl}
+        canSubmit={canSubmit()}
+        hasResult={!!result}
       />
 
       <ErrorDisplay error={error} />
 
-      <ResultsDisplay result={result} onHideResult={clearAll} />
+      <ResultsDisplay result={result} />
     </div>
   );
 }

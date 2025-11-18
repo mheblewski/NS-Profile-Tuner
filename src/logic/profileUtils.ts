@@ -26,10 +26,10 @@ export interface ProfileAdjustments {
 }
 
 /**
- * Rounds basal value to nearest 0.05
+ * Rounds basal value to nearest step
  */
-export function roundBasal(value: number): number {
-  return Math.round(value * 20) / 20;
+export function roundBasal(value: number, step: number = 0.05): number {
+  return Math.round(value / step) * step;
 }
 
 /**
@@ -105,7 +105,8 @@ export function applyAdjustmentsToProfile(
   profileObj: any,
   basalAdjPct: number[],
   icrPct: number,
-  isfPct: number
+  isfPct: number,
+  basalStep: number = 0.05
 ): ProfileAdjustments {
   const defaultBasal = Array.from({ length: 24 }, (_, i) => ({
     time: `${String(i).padStart(2, "0")}:00`,
@@ -124,7 +125,7 @@ export function applyAdjustmentsToProfile(
 
   const newBasal = curBasal.map((b, i) => {
     const pct = basalAdjPct[i] || 0;
-    const newVal = roundBasal(b.value * (1 + pct / 100));
+    const newVal = roundBasal(b.value * (1 + pct / 100), basalStep);
     return { time: b.time, old: b.value, new: newVal, pct };
   });
 

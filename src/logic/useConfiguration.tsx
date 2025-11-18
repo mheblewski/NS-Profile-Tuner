@@ -5,6 +5,7 @@ export interface Configuration {
   apiUrl: string;
   token: string;
   days: number;
+  basalStep: number;
 }
 
 /**
@@ -38,6 +39,10 @@ function validateConfiguration(config: Configuration): string[] {
     errors.push("Days must be between 1 and 30");
   }
 
+  if (config.basalStep <= 0 || config.basalStep > 1) {
+    errors.push("Basal step must be between 0.001 and 1.0");
+  }
+
   return errors;
 }
 
@@ -48,11 +53,13 @@ export function useConfiguration(defaultDays: number = 3) {
   const [apiUrl, setApiUrl] = useState("");
   const [token, setToken] = useState("");
   const [days, setDays] = useState(defaultDays);
+  const [basalStep, setBasalStep] = useState(0.05);
 
   const configuration: Configuration = {
     apiUrl,
     token,
     days,
+    basalStep,
   };
 
   const isConfigurationValid = (): boolean => {
@@ -64,13 +71,20 @@ export function useConfiguration(defaultDays: number = 3) {
   };
 
   const canSubmit = (): boolean => {
-    return isConfigurationValid() && getConfigurationErrors().length === 0;
+    // Simplified validation - just check if required fields are not empty
+    const hasApiUrl = apiUrl.trim() !== "";
+    const hasToken = token.trim() !== "";
+    const validDays = days >= 1 && days <= 30;
+    const validBasalStep = basalStep > 0 && basalStep <= 1;
+
+    return hasApiUrl && hasToken && validDays && validBasalStep;
   };
 
   const resetConfiguration = (): void => {
     setApiUrl("");
     setToken("");
     setDays(defaultDays);
+    setBasalStep(0.05);
   };
 
   const validateAndThrow = (): void => {
@@ -85,6 +99,8 @@ export function useConfiguration(defaultDays: number = 3) {
     setToken,
     days,
     setDays,
+    basalStep,
+    setBasalStep,
     isConfigurationValid,
     getConfigurationErrors,
     canSubmit,

@@ -10,13 +10,15 @@ export default function ConfigurationForm({
   setToken,
   days,
   setDays,
+  basalStep,
+  setBasalStep,
 }) {
   return (
     <div className="p-4 border rounded mb-4">
       <label className="block text-sm">Nightscout URL</label>
       <input
         style={{
-          background: "#FFFFFA",
+          background: "#FFFFFF",
           color: "#000000",
         }}
         className="w-full p-2 border rounded mb-2"
@@ -27,7 +29,7 @@ export default function ConfigurationForm({
       <label className="block text-sm">Token (dopisywany do URL)</label>
       <input
         style={{
-          background: "#FFFFFA",
+          background: "#FFFFFF",
           color: "#000000",
         }}
         className="w-full p-2 border rounded mb-2"
@@ -38,7 +40,7 @@ export default function ConfigurationForm({
       <label className="block text-sm">Zakres danych (dni)</label>
       <input
         style={{
-          background: "#FFFFFA",
+          background: "#FFFFFF",
           color: "#000000",
         }}
         type="number"
@@ -47,6 +49,21 @@ export default function ConfigurationForm({
         className="w-full p-2 border rounded mb-2"
         value={days}
         onChange={(e) => setDays(Number(e.target.value))}
+      />
+
+      <label className="block text-sm">Skok bazy (U/h)</label>
+      <input
+        style={{
+          background: "#FFFFFF",
+          color: "#000000",
+        }}
+        type="number"
+        min="0.001"
+        max="1"
+        step="0.001"
+        className="w-full p-2 border rounded mb-2"
+        value={basalStep}
+        onChange={(e) => setBasalStep(Number(e.target.value))}
       />
     </div>
   );

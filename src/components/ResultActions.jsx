@@ -1,9 +1,9 @@
 import React from "react";
 
 /**
- * Component for result action buttons (copy, hide)
+ * Component for result action buttons (copy)
  */
-export default function ResultActions({ result, onHideResult }) {
+export default function ResultActions({ result }) {
   const handleCopyResult = () => {
     navigator.clipboard.writeText(JSON.stringify(result.adjustments));
     alert("Skopiowano profil (JSON) do schowka");
@@ -16,9 +16,6 @@ export default function ResultActions({ result, onHideResult }) {
         onClick={handleCopyResult}
       >
         Kopiuj wynik (JSON)
-      </button>
-      <button className="px-4 py-2 bg-gray-200 rounded" onClick={onHideResult}>
-        Ukryj wynik
       </button>
     </div>
   );
