@@ -1,9 +1,9 @@
-import NightscoutProfileAdjuster from "./NightscoutProfileAdjuster";
+import NSProfileTuner from "./NSProfileTuner";
 
 export default function App() {
   return (
     <div className="flex justify-center p-4">
-      <NightscoutProfileAdjuster defaultDays={7} />
+      <NSProfileTuner defaultDays={7} />
     </div>
   );
 }

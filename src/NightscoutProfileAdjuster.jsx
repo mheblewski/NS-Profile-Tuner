@@ -5,7 +5,7 @@ import ActionButtons from "./components/ActionButtons";
 import ErrorDisplay from "./components/ErrorDisplay";
 import ResultsDisplay from "./components/ResultsDisplay";
 
-export default function NightscoutProfileAdjuster({ defaultDays = 3 }) {
+export default function NSProfileTuner({ defaultDays = 3 }) {
   const {
     // Configuration
     apiUrl,
