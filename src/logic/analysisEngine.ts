@@ -7,8 +7,10 @@ import {
   computeBasalAdjustments,
   analyzeTreatments,
   analyzeHourlyICR,
+  analyzeHourlyISF,
   validateProfileRecommendations,
   type HourlyICRAdjustment,
+  type HourlyISFAdjustment,
 } from "./dataAnalysis";
 import {
   parseLoopProfile,
@@ -23,6 +25,7 @@ export interface AnalysisResult {
   icrPct: number;
   isfPct: number;
   hourlyICRAdjustments: HourlyICRAdjustment[];
+  hourlyISFAdjustments: HourlyISFAdjustment[];
   adjustments: ProfileAdjustments;
   basalStep: number;
   validation?: {
@@ -60,6 +63,13 @@ export async function performAnalysis(
     entries,
     treatments,
     profileForICR.icr || []
+  );
+
+  // Analyze hourly ISF effectiveness
+  const hourlyISFAdjustments = analyzeHourlyISF(
+    entries,
+    treatments,
+    profileForICR.isf || profileForICR.sens || profileForICR.sensitivity || []
   );
 
   const adjustments = applyAdjustmentsToProfile(
@@ -104,6 +114,7 @@ export async function performAnalysis(
     icrPct,
     isfPct,
     hourlyICRAdjustments,
+    hourlyISFAdjustments,
     adjustments,
     basalStep,
     validation,
