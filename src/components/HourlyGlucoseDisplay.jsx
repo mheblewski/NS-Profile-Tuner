@@ -13,7 +13,7 @@ import {
 import { Line } from "react-chartjs-2";
 import annotationPlugin from "chartjs-plugin-annotation";
 
-// Rejestrujemy potrzebne komponenty Chart.js
+// Register required Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -30,13 +30,23 @@ ChartJS.register(
  * Component for displaying hourly glucose averages as a chart
  */
 export default function HourlyGlucoseDisplay({ hourlyAvg }) {
-  // Przygotowanie danych do wykresu
+  // Generate 24-hour time labels (00:00 - 23:00)
   const hours = Array.from(
     { length: 24 },
     (_, i) => String(i).padStart(2, "0") + ":00"
   );
 
+  // Convert hourly data to chart format, replacing null values
   const validData = hourlyAvg.map((v) => v || null);
+
+  // Calculate dynamic Y-axis range based on actual data values
+  const validValues = hourlyAvg.filter((v) => v !== null && v !== undefined);
+  const maxValue = validValues.length > 0 ? Math.max(...validValues) : 200;
+
+  // Establish Y-axis boundaries with appropriate margins
+  const yMin = 40; // Fixed minimum at 40 mg/dL for hypoglycemia visibility
+  const rawYMax = Math.max(200, maxValue + 40); // Minimum 200, higher if data requires
+  const yMax = Math.ceil(rawYMax / 20) * 20; // Round up to nearest multiple of 20 for clean scale
 
   const chartData = {
     labels: hours,
@@ -45,16 +55,15 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
         label: "Średnia glikemia (mg/dL)",
         data: validData,
         borderColor: "rgb(34, 197, 94)",
-        backgroundColor: "rgba(34, 197, 94, 0.1)",
         borderWidth: 2,
-        fill: true,
+        fill: false,
         tension: 0.4,
         pointBackgroundColor: "rgb(34, 197, 94)",
         pointBorderColor: "rgb(34, 197, 94)",
         pointBorderWidth: 2,
         pointRadius: 4,
         pointHoverRadius: 6,
-        spanGaps: true, // Łączy linie przez brakujące punkty
+        spanGaps: true, // Connect line through missing data points
       },
     ],
   };
@@ -73,13 +82,13 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
         callbacks: {
           label: function (context) {
             const value = context.parsed.y;
-            return value ? `${value.toFixed(0)} mg/dL` : "Brak danych";
+            return value ? `${value.toFixed(0)} mg/dL` : "No data";
           },
         },
       },
       annotation: {
         annotations: {
-          // Linia dolna - 70 mg/dL
+          // Lower glucose threshold reference line (70 mg/dL)
           line1: {
             type: "line",
             yMin: 70,
@@ -88,7 +97,7 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
             borderWidth: 2,
             borderDash: [5, 5],
             label: {
-              content: "Dolna granica (70 mg/dL)",
+              content: "Lower limit (70 mg/dL)",
               enabled: true,
               position: "end",
               backgroundColor: "rgba(34, 197, 94, 0.1)",
@@ -99,7 +108,7 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
               },
             },
           },
-          // Linia górna - 180 mg/dL
+          // Upper glucose threshold reference line (180 mg/dL)
           line2: {
             type: "line",
             yMin: 180,
@@ -108,7 +117,7 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
             borderWidth: 2,
             borderDash: [5, 5],
             label: {
-              content: "Górna granica (180 mg/dL)",
+              content: "Upper limit (180 mg/dL)",
               enabled: true,
               position: "end",
               backgroundColor: "rgba(34, 197, 94, 0.1)",
@@ -119,7 +128,7 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
               },
             },
           },
-          // Obszar prawidłowego zakresu
+          // Target glucose range background highlight (70-180 mg/dL)
           box1: {
             type: "box",
             yMin: 70,
@@ -134,8 +143,7 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
       x: {
         display: true,
         title: {
-          display: true,
-          text: "Godzina",
+          display: false,
         },
         grid: {
           color: "rgba(0, 0, 0, 0.1)",
@@ -144,15 +152,14 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
       y: {
         display: true,
         title: {
-          display: true,
-          text: "Glikemia (mg/dL)",
+          display: false,
         },
-        min: 50,
-        max: 300,
+        min: yMin,
+        max: yMax,
         grid: {
           color: "rgba(0, 0, 0, 0.1)",
         },
-        // Dodajemy linie referencyjne dla zakresów
+        // Format Y-axis tick labels with units
         ticks: {
           callback: function (value) {
             return value + " mg/dL";
@@ -174,7 +181,7 @@ export default function HourlyGlucoseDisplay({ hourlyAvg }) {
         <Line data={chartData} options={options} />
       </div>
 
-      {/* Dodatkowe informacje */}
+      {/* Chart description and legend */}
       <div className="mt-4 text-xs text-gray-600">
         <p>
           Wykres pokazuje średnie wartości glikemii dla każdej godziny dnia.

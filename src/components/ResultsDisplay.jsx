@@ -24,7 +24,8 @@ export default function ResultsDisplay({ result }) {
 
       <HourlyGlucoseDisplay hourlyAvg={result.hourlyAvg} />
 
-      <ResultActions result={result} />
+      {/* Temporarily hidden - Result actions */}
+      {/* <ResultActions result={result} /> */}
     </div>
   );
 }

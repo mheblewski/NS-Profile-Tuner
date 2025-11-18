@@ -34,10 +34,9 @@ export default function NSProfileTuner({ defaultDays = 3 }) {
         background: "#FAFAFA",
         color: "#000000",
         border: "1px solid #ccc",
+        width: "100%",
         ...(result
-          ? {
-              maxWidth: "95vw",
-            }
+          ? {}
           : {
               maxWidth: "700px",
               width: "90vw",
