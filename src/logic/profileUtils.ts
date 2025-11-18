@@ -108,70 +108,85 @@ export function applyAdjustmentsToProfile(
   isfPct: number,
   basalStep: number = 0.05
 ): ProfileAdjustments {
-  const defaultBasal = Array.from({ length: 24 }, (_, i) => ({
-    time: `${String(i).padStart(2, "0")}:00`,
-    value: 0.7,
-  }));
+  let newBasal: { time: string; old: number; new: number; pct: number }[] = [];
+  if (
+    profileObj?.basal &&
+    Array.isArray(profileObj.basal) &&
+    profileObj.basal.length > 0
+  ) {
+    const curBasalRaw = profileObj.basal.map((b: any) => ({
+      time: b.time || b.start,
+      value: Number(b.value || b.rate),
+    }));
 
-  const curBasalRaw = profileObj?.basal
-    ? profileObj.basal.map((b: any) => ({
-        time: b.time || b.start,
-        value: Number(b.value || b.rate),
-      }))
-    : defaultBasal;
+    // Expand to 24 hours
+    const curBasal = expandTo24Hours(curBasalRaw);
 
-  // Expand to 24 hours
-  const curBasal = expandTo24Hours(curBasalRaw);
-
-  const newBasal = curBasal.map((b, i) => {
-    const pct = basalAdjPct[i] || 0;
-    const newVal = roundBasal(b.value * (1 + pct / 100), basalStep);
-    return { time: b.time, old: b.value, new: newVal, pct };
-  });
-
-  // ICR - get from profile format
-  let icrSource = null;
-
-  if (profileObj?.icr) {
-    icrSource = profileObj.icr;
+    newBasal = curBasal.map((b, i) => {
+      const pct = basalAdjPct[i] || 0;
+      const newVal = roundBasal(b.value * (1 + pct / 100), basalStep);
+      return { time: b.time, old: b.value, new: newVal, pct };
+    });
   }
 
-  // Fallback
-  if (!icrSource || !Array.isArray(icrSource) || icrSource.length === 0) {
-    icrSource = [{ time: "00:00", value: 10 }];
+  let newICR: {
+    time: any;
+    old: number;
+    new: number;
+    pct: number;
+    oldUperWW: number;
+    newUperWW: number;
+  }[] = [];
+  if (
+    profileObj?.icr &&
+    Array.isArray(profileObj.icr) &&
+    profileObj.icr.length > 0
+  ) {
+    const curICR = profileObj.icr.map((c: any) => ({
+      time: c.time || c.start,
+      value: Number(c.value),
+    }));
+
+    newICR = curICR.map((c: any) => {
+      const oldVal = Number(c.value);
+      const newVal = Number((oldVal * (1 - icrPct / 100)).toFixed(2));
+
+      return {
+        time: c.time,
+        old: oldVal,
+        new: newVal,
+        pct: icrPct,
+        oldUperWW: Number((10 / oldVal).toFixed(2)),
+        newUperWW: Number((10 / newVal).toFixed(2)),
+      };
+    });
   }
 
-  const curICR = icrSource.map((c: any) => ({
-    time: c.time || c.start,
-    value: Number(c.value),
-  }));
+  let newSens: { time: any; old: number; new: number; pct: number }[] = [];
+  if (
+    (profileObj?.sens &&
+      Array.isArray(profileObj.sens) &&
+      profileObj.sens.length > 0) ||
+    (profileObj?.sensitivity &&
+      Array.isArray(profileObj.sensitivity) &&
+      profileObj.sensitivity.length > 0)
+  ) {
+    const sensSource = profileObj?.sens || profileObj?.sensitivity;
 
-  const newICR = curICR.map((c) => {
-    const oldVal = Number(c.value);
-    const newVal = Number((oldVal * (1 - icrPct / 100)).toFixed(2));
+    newSens = sensSource.map((s: any) => {
+      const oldVal = Number(s.value || s.sensitivity);
+      return {
+        time: s.time || s.start,
+        old: oldVal,
+        new: Number((oldVal * (1 - isfPct / 100)).toFixed(1)),
+        pct: isfPct,
+      };
+    });
+  }
 
-    return {
-      time: c.time,
-      old: oldVal,
-      new: newVal,
-      pct: icrPct,
-      oldUperWW: Number((10 / oldVal).toFixed(2)),
-      newUperWW: Number((10 / newVal).toFixed(2)),
-    };
-  });
-
-  const curSens = profileObj?.sens ||
-    profileObj?.sensitivity || [{ time: "00:00", value: 50 }];
-
-  const newSens = curSens.map((s: any) => {
-    const oldVal = Number(s.value || s.sensitivity);
-    return {
-      time: s.time || s.start,
-      old: oldVal,
-      new: Number((oldVal * (1 - isfPct / 100)).toFixed(1)),
-      pct: isfPct,
-    };
-  });
-
-  return { newBasal, newICR, newSens };
+  return {
+    newBasal,
+    newICR,
+    newSens,
+  };
 }

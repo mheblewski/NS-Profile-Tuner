@@ -15,8 +15,8 @@ export default function ConfigurationForm({
 }) {
   return (
     <div className="p-4 border rounded mb-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <label className="block text-sm mb-1">Nightscout URL</label>
             <input
@@ -46,7 +46,7 @@ export default function ConfigurationForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:col-span-2">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm mb-1">Zakres danych</label>
             <div className="relative">

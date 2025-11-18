@@ -4,6 +4,15 @@ import React from "react";
  * Component for displaying ISF sensitivity comparison table
  */
 export default function ISFComparisonTable({ isfData }) {
+  if (!isfData || isfData.length === 0) {
+    return (
+      <section className="p-4 border rounded bg-white">
+        <h3 className="font-semibold mb-2">Profil ISF</h3>
+        <div className="text-center text-gray-500 py-8">Brak danych</div>
+      </section>
+    );
+  }
+
   return (
     <section className="p-4 border rounded bg-white">
       <h3 className="font-semibold mb-2">Profil ISF</h3>
