@@ -71,21 +71,6 @@ export default function ICRComparisonTable({ icrData }) {
           ))}
         </tbody>
       </table>
-      {icrData.some((c) => c.confidence) && (
-        <div className="mt-2 text-xs text-gray-600">
-          <div>
-            * Pewność oparta na liczbie posiłków i wynikach glikemicznych
-          </div>
-          <div>
-            * Analizowane posiłki: wszystkie &gt;5g węglowodanów lub z bolusem
-            insuliny
-          </div>
-          <div>
-            * Kryteria sukcesu dostosowane do wielkości posiłku (małe:
-            &lt;160/130, średnie: &lt;170/135, duże: &lt;180/140 mg/dL)
-          </div>
-        </div>
-      )}
     </section>
   );
 }
