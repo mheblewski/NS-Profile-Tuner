@@ -26,7 +26,25 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
       (Array.isArray(isfStructuredData.newSlots) &&
         isfStructuredData.newSlots.length > 0));
 
-  if (!hasStructuredData && (!isfData || isfData.length === 0)) {
+  // Main table: profileCompliant + modifications
+  const displayData = hasStructuredData
+    ? [
+        ...(isfStructuredData?.profileCompliant || []),
+        ...(isfStructuredData?.modifications || []),
+      ]
+        .sort((a, b) => a.hour - b.hour)
+        .filter((s) => showUnchanged || !s.isProfileCompliant)
+    : isfData || [];
+
+  // New slots table
+  const newSlotsData = hasStructuredData
+    ? (isfStructuredData?.newSlots || []).sort((a, b) => a.hour - b.hour)
+    : [];
+
+  if (
+    (!displayData || displayData.length === 0) &&
+    (!newSlotsData || newSlotsData.length === 0)
+  ) {
     return (
       <section className="p-4 border bg-white rounded-xl shadow-lg">
         <h3 className="font-semibold mb-2">Profil ISF</h3>
@@ -35,309 +53,270 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
     );
   }
 
-  // Render two separate tables
-  if (hasStructuredData) {
-    return (
-      <div className="space-y-6">
-        {/* Table 1: All existing profile slots */}
-        {(isfStructuredData.modifications?.length > 0 ||
-          isfStructuredData.profileCompliant?.length > 0) && (
-          <section className="p-4 border bg-white rounded-xl shadow-lg">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
-              <h3 className="font-semibold mb-2 md:mb-0 flex items-center">
-                Profil ISF
-              </h3>
-              <button
-                className="text-xs px-3 py-1 rounded border bg-gray-50 hover:bg-gray-100 text-gray-700"
-                onClick={() => setShowUnchanged((v) => !v)}
-              >
-                {showUnchanged
-                  ? "Ukryj sloty bez zmiany"
-                  : "Pokaż wszystkie sloty"}
-              </button>
+  // Czy są sloty profileCompliant do ukrywania/pokazywania?
+  const canToggleProfileCompliant =
+    hasStructuredData && (isfStructuredData?.profileCompliant?.length || 0) > 0;
+
+  return (
+    <section className="p-4 border bg-white rounded-xl shadow-lg">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold">Profil ISF</h3>
+        {canToggleProfileCompliant && (
+          <button
+            className={
+              "ml-2 px-3 py-1 rounded font-semibold text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-gray-300 bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+            }
+            onClick={() => setShowUnchanged((v) => !v)}
+          >
+            {showUnchanged ? "Ukryj sloty bez zmian" : "Pokaż wszystkie sloty"}
+          </button>
+        )}
+      </div>
+      {/* Main ISF table/cards */}
+      <div className="flex flex-col gap-2 md:hidden">
+        {displayData.map((s, i) => {
+          const hour =
+            s.time ||
+            (s.hour !== undefined
+              ? String(s.hour).padStart(2, "0") + ":00"
+              : "");
+          const current = s.currentISF !== undefined ? s.currentISF : s.old;
+          const suggested =
+            s.suggestedISF !== undefined ? s.suggestedISF : s.new;
+          const pct =
+            current && suggested
+              ? Math.round(((suggested - current) / current) * 100)
+              : s.adjustmentPct !== undefined
+              ? s.adjustmentPct
+              : s.pct;
+          const changed = Math.abs((suggested ?? 0) - (current ?? 0)) > 0.001;
+          return (
+            <div
+              key={i}
+              className={`border rounded-md bg-white px-4 py-2 flex flex-col ${
+                changed
+                  ? "ring-1 ring-yellow-300 bg-yellow-50"
+                  : "ring-1 ring-gray-200"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1 min-h-[32px]">
+                <span className="text-[16px] font-bold text-gray-800 tracking-wide">
+                  {hour}
+                </span>
+                {changed && (
+                  <span className="ml-2 px-1.5 py-0.5 rounded bg-yellow-200 text-yellow-900 text-[9px] font-semibold uppercase">
+                    Zmiana
+                  </span>
+                )}
+                <span className="ml-auto flex items-center">
+                  <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold flex items-center">
+                    {pct > 0 ? "+" : ""}
+                    {pct}%
+                  </span>
+                </span>
+              </div>
+              <div className="text-[15px] text-gray-700 flex items-center gap-2">
+                <span>
+                  {current}{" "}
+                  <span className="text-gray-400 text-[13px]">mg/dL/U</span>
+                </span>
+                <span className="text-gray-400 text-[18px]">→</span>
+                <span className="font-bold text-blue-900">
+                  {suggested}
+                </span>{" "}
+                <span className="text-gray-400 text-[13px]">mg/dL/U</span>
+              </div>
             </div>
-            {/* Mobile: karty */}
-            <div className="flex flex-col gap-1 md:hidden">
-              {[
-                ...(isfStructuredData.profileCompliant || []),
-                ...(isfStructuredData.modifications || []),
-              ]
-                .sort((a, b) => a.hour - b.hour)
-                .filter((s) => showUnchanged || !s.isProfileCompliant)
-                .map((s, i) => {
-                  const isChanged = !s.isProfileCompliant;
-                  const delta = `${s.adjustmentPct > 0 ? "+" : ""}${
-                    s.adjustmentPct
-                  }%`;
-                  return (
-                    <div
-                      key={i}
-                      className={`relative border rounded-md px-6 py-2 bg-white ${
-                        isChanged
-                          ? "ring-1 ring-yellow-300 bg-yellow-50"
-                          : "ring-1 ring-gray-200"
-                      }`}
-                    >
-                      {/* Linia 1: godzina + tag z nową wartością */}
-                      <div className="flex items-center gap-2 mb-0.5 min-h-[32px]">
-                        <span className="text-[16px] font-bold text-gray-800 tracking-wide">
-                          {String(s.hour).padStart(2, "0")}:00
-                        </span>
-                        {isChanged && (
-                          <span className="ml-2 px-1.5 py-0.5 rounded bg-yellow-200 text-yellow-900 text-[9px] font-semibold uppercase">
-                            Zmiana
-                          </span>
-                        )}
-                        <span className="ml-auto flex items-center h-full absolute right-4 top-1/2 -translate-y-1/2">
-                          <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold flex items-center">
-                            {s.adjustmentPct > 0 ? "+" : ""}
-                            {s.adjustmentPct}%
-                          </span>
-                        </span>
-                      </div>
-                      <style jsx>{`
-                        @media (max-width: 767px) {
-                          .relative-card {
-                            position: relative;
-                          }
-                        }
-                      `}</style>
-                      {/* Linia 2: stara wartość → nowa wartość (+delta) */}
-                      <div className="text-[15px] text-gray-700 mt-0.5 flex items-center gap-2">
-                        <span>
-                          {s.currentISF}{" "}
-                          <span className="text-gray-400 text-[13px]">
-                            mg/dL/U
-                          </span>
-                        </span>
-                        <span className="text-gray-400 text-[18px]">→</span>
-                        <span className="font-bold text-blue-900">
-                          {s.suggestedISF}
-                        </span>{" "}
-                        <span className="text-gray-400 text-[13px]">
-                          mg/dL/U
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-            {/* Desktop: tabela */}
-            <table className="w-full min-w-[420px] rounded-xl overflow-hidden shadow border text-[15px] hidden md:table">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-3 py-2 border-b text-center font-semibold">
+          );
+        })}
+      </div>
+      <div className="overflow-x-auto hidden md:block rounded-xl shadow-lg overflow-hidden">
+        <table className="w-full min-w-[420px] border text-[15px]">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="px-3 py-2 border-b text-center font-semibold">
+                Godzina
+              </th>
+              <th className="px-3 py-2 border-b text-center font-semibold">
+                Aktualne (mg/dL/U)
+              </th>
+              <th className="px-3 py-2 border-b text-center font-semibold">
+                Sugerowane (mg/dL/U)
+              </th>
+              <th className="px-3 py-2 border-b text-center font-semibold">
+                Δ
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayData.map((s, i) => {
+              const hour =
+                s.time ||
+                (s.hour !== undefined
+                  ? String(s.hour).padStart(2, "0") + ":00"
+                  : "");
+              const current = s.currentISF !== undefined ? s.currentISF : s.old;
+              const suggested =
+                s.suggestedISF !== undefined ? s.suggestedISF : s.new;
+              const pct =
+                current && suggested
+                  ? Math.round(((suggested - current) / current) * 100)
+                  : s.adjustmentPct !== undefined
+                  ? s.adjustmentPct
+                  : s.pct;
+              const changed =
+                Math.abs((suggested ?? 0) - (current ?? 0)) > 0.001;
+              return (
+                <tr
+                  key={i}
+                  className={`transition-colors duration-150 border-b hover:bg-gray-100 ${
+                    changed ? "bg-yellow-50 hover:bg-yellow-100" : "bg-white"
+                  }`}
+                >
+                  <td className="px-3 py-2 border-b text-center text-[15px] font-bold text-gray-800">
+                    {hour}
+                  </td>
+                  <td className="px-3 py-2 border-b text-center text-gray-700">
+                    {current}
+                  </td>
+                  <td className="px-3 py-2 border-b text-center text-blue-900 font-semibold">
+                    {suggested}
+                  </td>
+                  <td className="px-3 py-2 border-b text-center">
+                    <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold">
+                      {pct > 0 ? "+" : ""}
+                      {pct}%
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* New slots section */}
+      {newSlotsData && newSlotsData.length > 0 && (
+        <div className="mt-8">
+          <h4 className="font-semibold mb-2 text-yellow-700 flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
+            Nowe sugerowane sloty ISF
+          </h4>
+          {/* Mobile: cards */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {newSlotsData.map((s, i) => {
+              const hour =
+                s.time ||
+                (s.hour !== undefined
+                  ? String(s.hour).padStart(2, "0") + ":00"
+                  : "");
+              const current = s.currentISF !== undefined ? s.currentISF : s.old;
+              const suggested =
+                s.suggestedISF !== undefined ? s.suggestedISF : s.new;
+              const pct =
+                current && suggested
+                  ? Math.round(((suggested - current) / current) * 100)
+                  : s.adjustmentPct !== undefined
+                  ? s.adjustmentPct
+                  : s.pct;
+              return (
+                <div
+                  key={i}
+                  className="border rounded-md bg-yellow-50 ring-1 ring-yellow-300 px-4 py-2 flex flex-col"
+                >
+                  <div className="flex items-center gap-2 mb-1 min-h-[32px]">
+                    <span className="text-[16px] font-bold text-yellow-900 tracking-wide">
+                      {hour}
+                    </span>
+                    <span className="ml-auto flex items-center">
+                      <span className="px-1.5 py-0.5 rounded bg-yellow-200 text-yellow-900 text-[13px] font-semibold flex items-center">
+                        Nowy slot
+                      </span>
+                      <span className="ml-2 px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold flex items-center">
+                        {pct > 0 ? "+" : ""}
+                        {pct}%
+                      </span>
+                    </span>
+                  </div>
+                  <div className="text-[15px] text-gray-700 flex items-center gap-2">
+                    <span>
+                      {current !== undefined ? current : "-"}{" "}
+                      <span className="text-gray-400 text-[13px]">mg/dL/U</span>
+                    </span>
+                    <span className="text-gray-400 text-[18px]">→</span>
+                    <span className="font-bold text-blue-900">
+                      {suggested}
+                    </span>{" "}
+                    <span className="text-gray-400 text-[13px]">mg/dL/U</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop: table */}
+          <div className="overflow-x-auto hidden md:block rounded-xl shadow-lg overflow-hidden mt-2">
+            <table className="w-full min-w-[420px] border text-[15px]">
+              <thead>
+                <tr className="bg-yellow-100">
+                  <th className="px-3 py-2 border-b text-center font-semibold text-yellow-900">
                     Godzina
                   </th>
-                  <th className="px-3 py-2 border-b text-center font-semibold">
+                  <th className="px-3 py-2 border-b text-center font-semibold text-yellow-900">
                     Aktualne (mg/dL/U)
                   </th>
-                  <th className="px-3 py-2 border-b text-center font-semibold">
+                  <th className="px-3 py-2 border-b text-center font-semibold text-yellow-900">
                     Sugerowane (mg/dL/U)
                   </th>
-                  <th className="px-3 py-2 border-b text-center font-semibold">
+                  <th className="px-3 py-2 border-b text-center font-semibold text-yellow-900">
                     Δ
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {[
-                  ...(isfStructuredData.profileCompliant || []),
-                  ...(isfStructuredData.modifications || []),
-                ]
-                  .sort((a, b) => a.hour - b.hour)
-                  .filter((s) => showUnchanged || !s.isProfileCompliant)
-                  .map((s, i) => (
+                {newSlotsData.map((s, i) => {
+                  const hour =
+                    s.time ||
+                    (s.hour !== undefined
+                      ? String(s.hour).padStart(2, "0") + ":00"
+                      : "");
+                  const current =
+                    s.currentISF !== undefined ? s.currentISF : s.old;
+                  const suggested =
+                    s.suggestedISF !== undefined ? s.suggestedISF : s.new;
+                  const pct =
+                    current && suggested
+                      ? Math.round(((suggested - current) / current) * 100)
+                      : s.adjustmentPct !== undefined
+                      ? s.adjustmentPct
+                      : s.pct;
+                  return (
                     <tr
                       key={i}
-                      className={`transition-colors duration-150 border-b hover:bg-gray-100 ${
-                        s.isProfileCompliant
-                          ? "bg-white"
-                          : "bg-yellow-50 hover:bg-yellow-100"
-                      }`}
+                      className="transition-colors duration-150 border-b bg-yellow-50 hover:bg-yellow-100"
                     >
-                      <td className="px-3 py-2 border-b text-center text-[15px] font-bold text-gray-800">
-                        {String(s.hour).padStart(2, "0")}:00
+                      <td className="px-3 py-2 border-b text-center text-[15px] font-bold text-yellow-900">
+                        {hour}
                       </td>
                       <td className="px-3 py-2 border-b text-center text-gray-700">
-                        {s.currentISF}
+                        {current !== undefined ? current : "-"}
                       </td>
                       <td className="px-3 py-2 border-b text-center text-blue-900 font-semibold">
-                        {s.suggestedISF}
+                        {suggested}
                       </td>
                       <td className="px-3 py-2 border-b text-center">
-                        <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold">
-                          {s.adjustmentPct > 0 ? "+" : ""}
-                          {s.adjustmentPct}%
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-yellow-200 text-yellow-900 text-[13px] font-semibold">
+                          {pct > 0 ? "+" : ""}
+                          {pct}%
                         </span>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
               </tbody>
             </table>
-          </section>
-        )}
-
-        {/* Table 2: New slots to add */}
-        {isfStructuredData.newSlots?.length > 0 && (
-          <section className="p-4 border bg-white rounded-xl shadow-lg">
-            <h3 className="font-semibold mb-2">
-              ✨ Profil ISF - Nowe sloty do dodania
-            </h3>
-            <p className="text-sm text-gray-600 mb-3">
-              Sugerowane time sloty które należy dodać do profilu
-            </p>
-            <table className="w-full min-w-[420px] rounded-xl overflow-hidden shadow border text-[15px] hidden md:table">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-2 text-center">Godzina</th>
-                  <th className="p-2 text-center">Aktualne (mg/dL/U)</th>
-                  <th className="p-2 text-center">Sugerowane (mg/dL/U)</th>
-                  <th className="p-2 text-center">Δ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isfStructuredData.newSlots
-                  .sort((a, b) => a.hour - b.hour)
-                  .map((s, i) => (
-                    <tr
-                      key={i}
-                      className="hover:bg-slate-100 transition-colors duration-150 bg-slate-50"
-                    >
-                      <td className="p-2 text-center">
-                        {String(s.hour).padStart(2, "0")}:00
-                        {s.isGroupedRecommendation && s.affectedHours && (
-                          <div className="text-xs text-gray-600 mt-1">
-                            Wpływa na:{" "}
-                            {s.affectedHours
-                              .map((h) => `${h.toString().padStart(2, "0")}:00`)
-                              .join(", ")}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-2 text-center">{s.currentISF}</td>
-                      <td className="p-2 text-center font-medium">
-                        {s.suggestedISF}
-                      </td>
-                      <td className="p-2 text-center">
-                        <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold">
-                          {s.adjustmentPct > 0 ? "+" : ""}
-                          {s.adjustmentPct}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </section>
-        )}
-      </div>
-    );
-  }
-
-  // Fallback to single table for backward compatibility
-  return (
-    <section className="p-4 border bg-white rounded-xl shadow-lg">
-      <h3 className="font-semibold mb-2">Profil ISF</h3>
-      {/* Toggle for unchanged slots */}
-      <div className="mb-2 md:hidden">
-        <button
-          className="text-xs px-3 py-1 rounded border bg-gray-50 hover:bg-gray-100 text-gray-700"
-          onClick={() => setShowUnchanged((v) => !v)}
-        >
-          {showUnchanged ? "Ukryj sloty bez zmiany" : "Pokaż wszystkie sloty"}
-        </button>
-      </div>
-      {/* Mobile: karty */}
-      <div className="flex flex-col gap-1 md:hidden">
-        {isfData
-          ?.filter((s) => showUnchanged || s.pct !== 0)
-          .map((s, i) => {
-            return (
-              <div
-                key={i}
-                className={`relative border rounded-md px-6 py-2 bg-white ${
-                  s.pct !== 0
-                    ? "ring-1 ring-yellow-300 bg-yellow-50"
-                    : "ring-1 ring-gray-200"
-                }`}
-              >
-                {/* Linia 1: godzina + tag z nową wartością */}
-                <div className="flex items-center gap-2 mb-0.5 min-h-[32px]">
-                  <span className="text-[16px] font-bold text-gray-800 tracking-wide">
-                    {s.time}
-                  </span>
-                  {s.pct !== 0 && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded bg-yellow-200 text-yellow-900 text-[9px] font-semibold uppercase">
-                      Zmiana
-                    </span>
-                  )}
-                  <span className="ml-auto flex items-center h-full absolute right-4 top-1/2 -translate-y-1/2">
-                    <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold flex items-center">
-                      {s.pct > 0 ? "+" : ""}
-                      {s.pct}%
-                    </span>
-                  </span>
-                </div>
-                <style jsx>{`
-                  @media (max-width: 767px) {
-                    .relative-card {
-                      position: relative;
-                    }
-                  }
-                `}</style>
-                {/* Linia 2: stara wartość → nowa wartość */}
-                <div className="text-[15px] text-gray-700 mt-0.5 flex items-center gap-2">
-                  <span>
-                    {s.old}{" "}
-                    <span className="text-gray-400 text-[13px]">mg/dL/U</span>
-                  </span>
-                  <span className="text-gray-400 text-[18px]">→</span>
-                  <span className="font-bold text-blue-900">{s.new}</span>{" "}
-                  <span className="text-gray-400 text-[13px]">mg/dL/U</span>
-                </div>
-              </div>
-            );
-          })}
-      </div>
-      {/* Desktop: tabela */}
-      <table className="w-full min-w-[420px] rounded-xl overflow-hidden shadow border text-[15px] hidden md:table">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="px-3 py-2 border-b text-center font-semibold">
-              Godzina
-            </th>
-            <th className="px-3 py-2 border-b text-center font-semibold">
-              Aktualne (mg/dL/U)
-            </th>
-            <th className="px-3 py-2 border-b text-center font-semibold">
-              Sugerowane (mg/dL/U)
-            </th>
-            <th className="px-3 py-2 border-b text-center font-semibold">Δ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {isfData?.map((s, i) => (
-            <tr key={i} className="bg-white transition-colors duration-150">
-              <td className="px-3 py-2 border-b text-center text-[15px] font-bold text-gray-800">
-                {s.time}
-              </td>
-              <td className="px-3 py-2 border-b text-center text-gray-700">
-                {s.old}
-              </td>
-              <td className="px-3 py-2 border-b text-center text-blue-900 font-semibold">
-                {s.new}
-              </td>
-              <td className="px-3 py-2 border-b text-center">
-                <span className="inline-block px-2 py-0.5 rounded-full font-bold text-base bg-gray-100 text-gray-700">
-                  {s.pct > 0 ? "+" : ""}
-                  {s.pct}%
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

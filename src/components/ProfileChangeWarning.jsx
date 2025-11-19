@@ -92,7 +92,9 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
                         </div>
                         <button
                           type="button"
-                          className="ml-2 px-2 py-0.5 text-xs rounded bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 transition-colors"
+                          className={
+                            "ml-2 px-3 py-1 rounded font-semibold text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-gray-300 bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                          }
                           onClick={() => toggleDay(dateStr)}
                           aria-expanded={isExpanded}
                         >
@@ -142,8 +144,8 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
                                 isf: "Zmiany w profilu ISF",
                               };
                               return (
-                                <div key={field} className="mb-2">
-                                  <span className="font-semibold text-[14px]">
+                                <div key={field} className="mb-4">
+                                  <span className="font-semibold text-[14px] mb-2 block">
                                     {fieldLabels[field] || field.toUpperCase()}:
                                   </span>
                                   {/* Mobile: paski, Desktop: card-table */}

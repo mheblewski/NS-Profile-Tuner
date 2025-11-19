@@ -457,6 +457,7 @@ export interface HourlyISFAdjustment {
   isGroupedRecommendation?: boolean; // True if this represents multiple grouped hours
   affectedHours?: number[]; // List of hours affected by this recommendation
   isProfileCompliant?: boolean; // True if current ISF is already good (small change needed)
+  time?: string; // Full slot time (HH:mm)
 }
 
 /**
@@ -471,6 +472,19 @@ export function analyzeHourlyISF(
   newSlots: HourlyISFAdjustment[];
   profileCompliant: HourlyISFAdjustment[];
 } {
+  // LOG: wejściowe dane do analizy ISF
+  // Jeden log: wejście i wyjście w formacie JSON do analizy
+  if (typeof console !== "undefined") {
+    setTimeout(() => {
+      try {
+        const data = {
+          input: { entries, treatments, profileISF },
+          output: result,
+        };
+        console.log("[ISF-ANALYZE]", JSON.stringify(data));
+      } catch (e) {}
+    }, 0);
+  }
   // Safety check for profile ISF
   if (!profileISF || profileISF.length === 0) {
     return { modifications: [], newSlots: [], profileCompliant: [] };
@@ -517,7 +531,26 @@ export function analyzeHourlyISF(
   const cleanCorrections = allCorrections.filter((c: any) => !c.nearbyMeal);
 
   // NEW: Analyze ALL 24 hours, not just existing profile slots
-  return analyzeAllHoursForISF(allCorrections, hourlyISFMap, validISFSlots);
+  const result = analyzeAllHoursForISF(
+    allCorrections,
+    hourlyISFMap,
+    validISFSlots
+  );
+  // LOG: wyjściowe dane z analizy ISF
+  // Jeden log: wejście i wyjście w formacie JSON do analizy
+  if (typeof console !== "undefined") {
+    setTimeout(() => {
+      try {
+        const data = {
+          input: { entries, treatments, profileISF },
+          output: result,
+        };
+        console.log("[ISF-ANALYZE]", JSON.stringify(data));
+      } catch (e) {}
+    }, 0);
+  }
+  // ...usunięto stare logi i fragmenty powodujące błąd...
+  return result;
 }
 
 /**
@@ -757,47 +790,54 @@ function groupCorrectionsByISFHour(
 
   // Initialize groups for each ISF time slot
   profileISF.forEach((isfSlot) => {
-    const hour = parseInt((isfSlot.time || isfSlot.start).split(":")[0]);
-    groups[hour] = [];
+    const timeKey = isfSlot.time || isfSlot.start;
+    groups[timeKey] = [];
   });
 
   // Map each correction to the appropriate ISF time slot
   correctionAnalyses.forEach((correction) => {
-    const correctionHour = correction.hour;
-
-    // Find which ISF time slot this correction belongs to
-    let applicableISFHour = 0;
+    // Ensure correction.minute exists (if not, set to 0 or extract from timestamp if available)
+    const corr = correction as typeof correction & { minute?: number };
+    if (corr.minute === undefined) {
+      if (corr.timestamp) {
+        const d = new Date(corr.timestamp);
+        corr.minute = d.getMinutes();
+      } else {
+        corr.minute = 0;
+      }
+    }
+    // Find which ISF time slot this correction belongs to (by full time, not just hour)
+    let applicableTimeKey =
+      profileISF[0] && (profileISF[0].time || profileISF[0].start);
     for (let i = profileISF.length - 1; i >= 0; i--) {
       const isfSlot = profileISF[i];
       if (!isfSlot || (!isfSlot.time && !isfSlot.start)) continue;
-
-      const [isfHourStr] = (isfSlot.time || isfSlot.start).split(":");
-      const isfHour = parseInt(isfHourStr);
-
-      if (correctionHour >= isfHour) {
-        applicableISFHour = isfHour;
+      const slotTime = isfSlot.time || isfSlot.start;
+      const [slotHour, slotMin] = slotTime.split(":").map(Number);
+      if (
+        corr.hour > slotHour ||
+        (corr.hour === slotHour && (corr.minute ?? 0) >= slotMin)
+      ) {
+        applicableTimeKey = slotTime;
         break;
       }
     }
-
-    // Handle wrap-around (correction after midnight but before first ISF slot)
+    // Wrap-around: before first slot
     const firstSlot = profileISF[0];
     const lastSlot = profileISF[profileISF.length - 1];
-
     if (
       firstSlot &&
       (firstSlot.time || firstSlot.start) &&
-      correctionHour <
-        parseInt((firstSlot.time || firstSlot.start).split(":")[0])
+      (corr.hour < Number((firstSlot.time || firstSlot.start).split(":")[0]) ||
+        (corr.hour ===
+          Number((firstSlot.time || firstSlot.start).split(":")[0]) &&
+          (corr.minute ?? 0) <
+            Number((firstSlot.time || firstSlot.start).split(":")[1])))
     ) {
-      if (lastSlot && (lastSlot.time || lastSlot.start)) {
-        const [lastHourStr] = (lastSlot.time || lastSlot.start).split(":");
-        applicableISFHour = parseInt(lastHourStr);
-      }
+      applicableTimeKey = lastSlot.time || lastSlot.start;
     }
-
-    if (groups[applicableISFHour]) {
-      groups[applicableISFHour].push(correction);
+    if (groups[applicableTimeKey]) {
+      groups[applicableTimeKey].push(corr);
     }
   });
 
@@ -841,29 +881,90 @@ function calculateHourlyISFAdjustment(
     };
   }
 
+  // --- SAFETY GUARD: Block ISF reduction if hypoglycemia or temp basal 0 detected ---
+  // 1. Check for hypoglycemia (<70 mg/dL) in the hour
+  // 2. Check for temp basal 0 in the hour
+  let blockISFReduction = false;
+  try {
+    // Find all pre/post glucose values for this hour
+    const allGlucoses = validCorrections.flatMap((c) =>
+      [c.preGlucose, c.glucoseAt2h, c.glucoseAt3h].filter((v) => v !== null)
+    );
+    if (allGlucoses.some((g) => g !== null && g < 70)) {
+      blockISFReduction = true;
+    }
+    // Check for temp basal 0 in corrections (if any correctionInsulin == 0 and from temp basal)
+    if (validCorrections.some((c) => c.correctionInsulin === 0)) {
+      blockISFReduction = true;
+    }
+  } catch (e) {}
+
   const successRate =
     validCorrections.filter((c) => c.success).length / validCorrections.length;
   const avgEfficiency =
     validCorrections.reduce((sum, c) => sum + (c.efficiency || 0), 0) /
     validCorrections.length;
 
+  // DEBUG: Log szczegóły korekt dla tego slotu
+  if (typeof console !== "undefined" && validCorrections.length > 0) {
+    const effs = validCorrections.map((c) => c.efficiency ?? 0);
+    const minEff = Math.min(...effs);
+    const maxEff = Math.max(...effs);
+    const avgEff = avgEfficiency;
+    const drops = validCorrections.map((c) => c.actualDrop ?? 0);
+    const minDrop = Math.min(...drops);
+    const maxDrop = Math.max(...drops);
+    const avgDrop = drops.reduce((a, b) => a + b, 0) / drops.length;
+    console.log(`\n[ISF SLOT ${hour}] ISF=${currentISF}`);
+    console.log(
+      `Efficiency: min=${minEff.toFixed(2)}, max=${maxEff.toFixed(
+        2
+      )}, avg=${avgEff.toFixed(2)}`
+    );
+    console.log(
+      `ActualDrop: min=${minDrop}, max=${maxDrop}, avg=${avgDrop.toFixed(1)}`
+    );
+    console.log(`Korekty: (insulin, preG, expDrop, actDrop, eff, success)`);
+    validCorrections.forEach((c, idx) => {
+      console.log(
+        `#${idx + 1}: ins=${c.correctionInsulin}, preG=${
+          c.preGlucose
+        }, expDrop=${c.expectedDrop}, actDrop=${c.actualDrop}, eff=${(
+          c.efficiency ?? 0
+        ).toFixed(2)}, ${c.success ? "OK" : "FAIL"}`
+      );
+    });
+  }
+
   // Calculate suggested ISF based on average efficiency
   let suggestedISF = currentISF;
   let adjustmentPct = 0;
 
   if (avgEfficiency > 0) {
-    // If efficiency > 1, ISF is too low (insulin too strong), increase ISF
-    // If efficiency < 1, ISF is too high (insulin too weak), decrease ISF
-    const targetEfficiency = 0.9; // Aim for 90% efficiency (slight overcorrection prevention)
-    const efficiencyRatio = targetEfficiency / avgEfficiency;
+    // Jeśli efektywność > target, insulina działa mocniej → ISF powinien rosnąć
+    // Jeśli efektywność < target, insulina działa słabiej → ISF powinien maleć
+    const targetEfficiency = 0.9;
+    const efficiencyRatio = avgEfficiency / targetEfficiency;
 
-    // Calculate new ISF
-    suggestedISF = Math.max(10, Math.min(100, currentISF * efficiencyRatio));
-    adjustmentPct = ((suggestedISF - currentISF) / currentISF) * 100;
+    // Nowy ISF: im większa efektywność, tym większy ISF
+    const theoreticalSuggestedISF = currentISF * efficiencyRatio;
+    let theoreticalAdjustmentPct =
+      ((theoreticalSuggestedISF - currentISF) / currentISF) * 100;
 
-    // Limit adjustments to safe ranges
-    adjustmentPct = Math.max(-30, Math.min(30, adjustmentPct));
-    suggestedISF = currentISF * (1 + adjustmentPct / 100);
+    // SAFETY: If blockISFReduction, do not allow ISF to decrease (no negative adjustment)
+    if (blockISFReduction && theoreticalSuggestedISF < currentISF) {
+      suggestedISF = currentISF;
+      adjustmentPct = 0;
+    } else {
+      // Clamp adjustment to max ±30%
+      let unclampedISF = Math.max(10, theoreticalSuggestedISF);
+      let unclampedPct = ((unclampedISF - currentISF) / currentISF) * 100;
+      let clampedPct = Math.max(-30, Math.min(30, unclampedPct));
+      suggestedISF = currentISF * (1 + clampedPct / 100);
+      adjustmentPct = clampedPct;
+    }
+    // Loguj także wartości teoretyczne
+    // ...usunięto log teoretyczny...
   }
 
   const confidence = Math.min(1.0, validCorrections.length / 5); // Full confidence with 5+ corrections
@@ -1361,47 +1462,48 @@ function analyzeAllHoursForISF(
   });
 
   const results: HourlyISFAdjustment[] = [];
-  const existingSlotHours = existingSlots.map((slot) =>
-    parseInt((slot.time || slot.start).split(":")[0])
+  const existingSlotTimes = existingSlots.map(
+    (slot) => slot.time || slot.start
   );
 
   // Analyze each hour
   for (let hour = 0; hour < 24; hour++) {
-    const corrections = correctionsByHour[hour].filter(
-      (c: any) => !c.nearbyMeal
-    );
-
-    if (corrections.length === 0) continue; // Skip hours with no data
-
-    const currentISF = hourlyISFMap[hour];
-    const adjustment = calculateHourlyISFAdjustment(
-      hour,
-      currentISF,
-      corrections
-    );
-
-    // Mark if this is a new suggested slot (not in existing profile)
-    const isNewSlot = !existingSlotHours.includes(hour);
-    const isSignificantChange = Math.abs(adjustment.adjustmentPct) >= 10; // 10%+ change
-
-    // Include in results if:
-    // 1. Existing slot with any change
-    // 2. New slot with significant change needed
-    // 3. Existing slot with small change (mark as "profile compliant")
-
-    const isProfileCompliant =
-      !isNewSlot && !isSignificantChange && corrections.length >= 2;
-
-    if (
-      !isNewSlot ||
-      (isNewSlot && isSignificantChange && corrections.length >= 2) ||
-      isProfileCompliant
-    ) {
-      results.push({
-        ...adjustment,
-        isNewSlot: isNewSlot,
-        isProfileCompliant: isProfileCompliant,
+    for (let minute = 0; minute < 60; minute += 1) {
+      const corrections = (correctionsByHour[hour] || []).filter(
+        (c: any) => !c.nearbyMeal && (c.minute ?? 0) === minute
+      );
+      if (corrections.length === 0) continue;
+      const currentISF = hourlyISFMap[hour];
+      const adjustment = calculateHourlyISFAdjustment(
+        hour,
+        currentISF,
+        corrections
+      );
+      // Find matching slot time (HH:mm)
+      const slotTime = existingSlotTimes.find((t) => {
+        const [h, m] = t.split(":").map(Number);
+        return h === hour && m === minute;
       });
+      const isNewSlot = !slotTime;
+      const isSignificantChange = Math.abs(adjustment.adjustmentPct) >= 10;
+      const isProfileCompliant =
+        !isNewSlot && !isSignificantChange && corrections.length >= 2;
+      if (
+        !isNewSlot ||
+        (isNewSlot && isSignificantChange && corrections.length >= 2) ||
+        isProfileCompliant
+      ) {
+        results.push({
+          ...adjustment,
+          time:
+            slotTime ||
+            `${hour.toString().padStart(2, "0")}:${minute
+              .toString()
+              .padStart(2, "0")}`,
+          isNewSlot: isNewSlot,
+          isProfileCompliant: isProfileCompliant,
+        });
+      }
     }
   }
 
@@ -1438,36 +1540,51 @@ function optimizeISFTimeSlots(
 
   // NEW APPROACH: Show each existing profile slot separately
   // Create a mapping of which problems affect which existing slots
-  const existingSlotHours = existingSlots.map((slot) =>
-    parseInt((slot.time || slot.start).split(":")[0])
+  const existingSlotTimes = existingSlots.map(
+    (slot) => slot.time || slot.start
   );
 
   // For each existing slot, determine if it needs changes based on analysis results
-  existingSlots.forEach((slot) => {
-    const slotHour = parseInt((slot.time || slot.start).split(":")[0]);
+  existingSlots.forEach((slot, idx) => {
+    const slotTime = slot.time || slot.start;
     const currentISF = slot.value;
-
-    // Find analysis results that would be covered by this slot
-    // (problems that occur after this slot time but before next slot)
-    const nextSlotHour =
-      existingSlots
-        .map((s) => parseInt((s.time || s.start).split(":")[0]))
-        .filter((h) => h > slotHour)
-        .sort((a, b) => a - b)[0] || 24; // Next slot or end of day
-
+    // Find analysis results that would be covered by this slot (from slotTime to nextSlotTime)
+    const nextSlotTime = existingSlots[idx + 1]
+      ? existingSlots[idx + 1].time || existingSlots[idx + 1].start
+      : null;
+    const [slotHour, slotMin] = slotTime.split(":").map(Number);
+    let nextSlotHour = 24,
+      nextSlotMin = 0;
+    if (nextSlotTime) {
+      [nextSlotHour, nextSlotMin] = nextSlotTime.split(":").map(Number);
+    }
     // Find problems in the range covered by this slot
     const problemsInRange = needsOptimization.filter((problem) => {
-      return problem.hour >= slotHour && problem.hour < nextSlotHour;
+      if (!problem.time) return false;
+      const [pHour, pMin] = problem.time.split(":").map(Number);
+      if (nextSlotTime) {
+        // Between slotTime (inclusive) and nextSlotTime (exclusive)
+        if (
+          (pHour > slotHour || (pHour === slotHour && pMin >= slotMin)) &&
+          (pHour < nextSlotHour ||
+            (pHour === nextSlotHour && pMin < nextSlotMin))
+        ) {
+          return true;
+        }
+        return false;
+      } else {
+        // Last slot: from slotTime to end of day
+        return pHour > slotHour || (pHour === slotHour && pMin >= slotMin);
+      }
     });
-
     if (problemsInRange.length > 0) {
       // This slot needs modification - use the most confident suggestion
       const bestProblem = problemsInRange.reduce((best, current) =>
         current.confidence > best.confidence ? current : best
       );
-
       modifications.push({
         hour: slotHour,
+        time: slotTime,
         currentISF: currentISF,
         suggestedISF: bestProblem.suggestedISF,
         adjustmentPct: Math.round(
@@ -1492,6 +1609,7 @@ function optimizeISFTimeSlots(
       // This slot is fine as is
       profileCompliant.push({
         hour: slotHour,
+        time: slotTime,
         currentISF: currentISF,
         suggestedISF: currentISF,
         adjustmentPct: 0,
@@ -1507,14 +1625,31 @@ function optimizeISFTimeSlots(
 
   // Add truly new slots (hours not covered by any existing slot)
   const trulyNewProblems = needsOptimization.filter((problem) => {
-    return !existingSlots.some((slot) => {
-      const slotHour = parseInt((slot.time || slot.start).split(":")[0]);
-      const nextSlotHour =
-        existingSlots
-          .map((s) => parseInt((s.time || s.start).split(":")[0]))
-          .filter((h) => h > slotHour)
-          .sort((a, b) => a - b)[0] || 24;
-      return problem.hour >= slotHour && problem.hour < nextSlotHour;
+    if (!problem.time) return true;
+    return !existingSlotTimes.some((slotTime, idx) => {
+      const [slotHour, slotMin] = slotTime.split(":").map(Number);
+      let nextSlotHour = 24,
+        nextSlotMin = 0;
+      if (existingSlotTimes[idx + 1]) {
+        [nextSlotHour, nextSlotMin] = existingSlotTimes[idx + 1]
+          .split(":")
+          .map(Number);
+      }
+      const [pHour, pMin] = problem.time!.split(":").map(Number);
+      if (existingSlotTimes[idx + 1]) {
+        // Between slotTime (inclusive) and nextSlotTime (exclusive)
+        if (
+          (pHour > slotHour || (pHour === slotHour && pMin >= slotMin)) &&
+          (pHour < nextSlotHour ||
+            (pHour === nextSlotHour && pMin < nextSlotMin))
+        ) {
+          return true;
+        }
+        return false;
+      } else {
+        // Last slot: from slotTime to end of day
+        return pHour > slotHour || (pHour === slotHour && pMin >= slotMin);
+      }
     });
   });
 

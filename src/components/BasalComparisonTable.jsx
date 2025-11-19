@@ -48,15 +48,17 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
   }, []);
   return (
     <section className="p-4 border bg-white rounded-xl shadow-lg">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
-        <h3 className="font-semibold mb-2 md:mb-0 flex items-center">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold flex items-center">
           Profil bazy
           <span className="ml-2 text-xs font-normal text-gray-600">
             * Wartości zaokrąglane do {basalStep}U
           </span>
         </h3>
         <button
-          className="text-xs px-3 py-1 rounded border bg-gray-50 hover:bg-gray-100 text-gray-700"
+          className={
+            "ml-2 px-3 py-1 rounded font-semibold text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-gray-300 bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+          }
           onClick={() => setShowUnchanged((v) => !v)}
         >
           {showUnchanged ? "Ukryj sloty bez zmiany" : "Pokaż wszystkie sloty"}

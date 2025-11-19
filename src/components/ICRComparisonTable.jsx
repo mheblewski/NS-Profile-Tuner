@@ -74,12 +74,12 @@ export default function ICRComparisonTable({ icrData, icrStructuredData }) {
     const step = icrStructuredData?.suggestedICRStep || 2;
     return (
       <section className="p-4 border bg-white rounded-xl shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
-          <h3 className="font-semibold mb-2 md:mb-0 flex items-center">
-            Profil ICR
-          </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold flex items-center">Profil ICR</h3>
           <button
-            className="text-xs px-3 py-1 rounded border bg-gray-50 hover:bg-gray-100 text-gray-700"
+            className={
+              "ml-2 px-3 py-1 rounded font-semibold text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-gray-300 bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+            }
             onClick={() => setShowUnchanged((v) => !v)}
           >
             {showUnchanged ? "Ukryj sloty bez zmiany" : "Pokaż wszystkie sloty"}
@@ -180,7 +180,7 @@ export default function ICRComparisonTable({ icrData, icrStructuredData }) {
           <table className="w-full min-w-[500px] border text-[15px]">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-2 text-center">Godzina</th>
+                <th className="p-2 text-center font-bold">Godzina</th>
                 <th className="p-2 text-center">Aktualne (g/U)</th>
                 <th className="p-2 text-center">Sugerowane (g/U)</th>
                 <th className="px-3 py-2 border-b text-center font-semibold">
@@ -201,7 +201,7 @@ export default function ICRComparisonTable({ icrData, icrStructuredData }) {
                         : "bg-yellow-50 hover:bg-yellow-100"
                     }`}
                   >
-                    <td className="p-2 text-center">
+                    <td className="p-2 text-center font-bold text-gray-800">
                       {String(s.hour).padStart(2, "0")}:00
                     </td>
                     <td className="p-2 text-center">{s.currentICR}</td>
