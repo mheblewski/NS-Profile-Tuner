@@ -10,6 +10,7 @@ export interface FetchResult {
   entries: any;
   treatments: any;
   profile: any;
+  profileHistory: any;
 }
 
 /**

@@ -36,7 +36,7 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                   <th className="p-2 text-center">Godzina</th>
                   <th className="p-2 text-center">Aktualne (mg/dL/U)</th>
                   <th className="p-2 text-center">Sugerowane (mg/dL/U)</th>
-                  <th className="p-2 text-center">Δ%</th>
+                  <th className="p-2 text-center">Δ</th>
                 </tr>
               </thead>
               <tbody>
@@ -62,7 +62,10 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                       <td className="p-2 text-center font-medium">
                         {s.suggestedISF}
                       </td>
-                      <td className="p-2 text-center">{s.adjustmentPct}%</td>
+                      <td className="p-2 text-center">
+                        {s.adjustmentPct > 0 ? "+" : ""}
+                        {s.adjustmentPct}%
+                      </td>
                     </tr>
                   ))}
               </tbody>
@@ -85,7 +88,7 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                   <th className="p-2 text-center">Godzina</th>
                   <th className="p-2 text-center">Aktualne (mg/dL/U)</th>
                   <th className="p-2 text-center">Sugerowane (mg/dL/U)</th>
-                  <th className="p-2 text-center">Δ%</th>
+                  <th className="p-2 text-center">Δ</th>
                 </tr>
               </thead>
               <tbody>
@@ -111,7 +114,10 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                       <td className="p-2 text-center font-medium">
                         {s.suggestedISF}
                       </td>
-                      <td className="p-2 text-center">{s.adjustmentPct}%</td>
+                      <td className="p-2 text-center">
+                        {s.adjustmentPct > 0 ? "+" : ""}
+                        {s.adjustmentPct}%
+                      </td>
                     </tr>
                   ))}
               </tbody>
@@ -132,7 +138,7 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
             <th className="p-2 text-center">Godzina</th>
             <th className="p-2 text-center">Aktualne (mg/dL/U)</th>
             <th className="p-2 text-center">Sugerowane (mg/dL/U)</th>
-            <th className="p-2 text-center">Δ%</th>
+            <th className="p-2 text-center">Δ</th>
           </tr>
         </thead>
         <tbody>
@@ -144,7 +150,10 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
               <td className="p-2 text-center">{s.time}</td>
               <td className="p-2 text-center">{s.old}</td>
               <td className="p-2 text-center font-medium">{s.new}</td>
-              <td className="p-2 text-center">{s.pct}%</td>
+              <td className="p-2 text-center">
+                {s.pct > 0 ? "+" : ""}
+                {s.pct}%
+              </td>
             </tr>
           ))}
         </tbody>

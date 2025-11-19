@@ -30,7 +30,7 @@ export default function ICRComparisonTable({ icrData, icrStructuredData }) {
               <th className="p-2 text-center">Godzina</th>
               <th className="p-2 text-center">Aktualne (g/U)</th>
               <th className="p-2 text-center">Sugerowane (g/U)</th>
-              <th className="p-2 text-center">Δ%</th>
+              <th className="p-2 text-center">Δ</th>
               <th className="p-2 text-center">U/WW</th>
             </tr>
           </thead>
@@ -57,7 +57,10 @@ export default function ICRComparisonTable({ icrData, icrStructuredData }) {
                   <td className="p-2 text-center font-medium">
                     {s.suggestedICR}
                   </td>
-                  <td className="p-2 text-center">{s.adjustmentPct}%</td>
+                  <td className="p-2 text-center">
+                    {s.adjustmentPct > 0 ? "+" : ""}
+                    {s.adjustmentPct}%
+                  </td>
                   <td className="p-2 text-center">
                     {(10 / s.currentICR).toFixed(2)} →{" "}
                     <strong>{(10 / s.suggestedICR).toFixed(2)}</strong>
@@ -80,7 +83,7 @@ export default function ICRComparisonTable({ icrData, icrStructuredData }) {
             <th className="p-2 text-center">Godzina</th>
             <th className="p-2 text-center">Aktualne (g/U)</th>
             <th className="p-2 text-center">Sugerowane (g/U)</th>
-            <th className="p-2 text-center">Δ%</th>
+            <th className="p-2 text-center">Δ</th>
             <th className="p-2 text-center">U/WW</th>
           </tr>
         </thead>
@@ -95,7 +98,10 @@ export default function ICRComparisonTable({ icrData, icrStructuredData }) {
               <td className="p-2 text-center">{c.time}</td>
               <td className="p-2 text-center">{c.old}</td>
               <td className="p-2 text-center font-medium">{c.new}</td>
-              <td className="p-2 text-center">{c.pct}%</td>
+              <td className="p-2 text-center">
+                {c.pct > 0 ? "+" : ""}
+                {c.pct}%
+              </td>
               <td className="p-2 text-center">
                 {c.oldUperWW} → <strong>{c.newUperWW}</strong>
               </td>

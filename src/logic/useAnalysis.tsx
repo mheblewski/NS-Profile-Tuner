@@ -10,7 +10,9 @@ export interface AnalysisData {
   entries: any;
   treatments: any;
   profile: any;
+  profileHistory?: any;
   basalStep?: number;
+  days?: number;
 }
 
 /**
@@ -33,7 +35,9 @@ export function useAnalysis() {
         data.entries,
         data.treatments,
         data.profile,
-        data.basalStep || 0.05
+        data.basalStep || 0.05,
+        data.profileHistory || [],
+        data.days || 7
       );
 
       setResult(analysisResult);

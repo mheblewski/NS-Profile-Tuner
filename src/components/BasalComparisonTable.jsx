@@ -39,7 +39,10 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
                     <td className="p-2 text-center font-medium">
                       {b.new.toFixed(2)}
                     </td>
-                    <td className="p-2 text-center">{b.pct}%</td>
+                    <td className="p-2 text-center">
+                      {b.pct > 0 ? "+" : ""}
+                      {b.pct}%
+                    </td>
                   </tr>
                 );
               })}

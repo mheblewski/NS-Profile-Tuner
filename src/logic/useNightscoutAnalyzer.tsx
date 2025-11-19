@@ -37,6 +37,7 @@ export function useNightscoutAnalyzer(defaultDays: number = 3) {
       const analysisResult = await analysis.runAnalysis({
         ...fetchResult,
         basalStep: basalStepNum,
+        days: daysNum,
       });
 
       return analysisResult;

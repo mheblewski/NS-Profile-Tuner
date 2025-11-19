@@ -3,6 +3,7 @@ import BasalComparisonTable from "./BasalComparisonTable";
 import ICRComparisonTable from "./ICRComparisonTable";
 import ISFComparisonTable from "./ISFComparisonTable";
 import HourlyGlucoseDisplay from "./HourlyGlucoseDisplay";
+import ProfileChangeWarning from "./ProfileChangeWarning";
 import ResultActions from "./ResultActions";
 
 /**
@@ -13,6 +14,11 @@ export default function ResultsDisplay({ result }) {
 
   return (
     <div className="space-y-6">
+      {/* Profile change warning - show first */}
+      <ProfileChangeWarning
+        profileChangeAnalysis={result.profileChangeAnalysis}
+      />
+
       <BasalComparisonTable
         basalData={result.adjustments.newBasal}
         basalStep={result.basalStep}

@@ -110,13 +110,55 @@ export async function fetchProfile(
 }
 
 /**
- * Orchestrates fetching all Nightscout data
+ * Fetches profile history from Nightscout API for detecting profile changes
+ */
+export async function fetchProfileHistory(
+  baseUrl: string,
+  token: string,
+  since: string
+): Promise<any | null> {
+  try {
+    const params = new URLSearchParams({
+      token: token || "",
+      count: "100",
+      "find[created_at][$gte]": since,
+    });
+
+    const response = await fetch(`${baseUrl}/api/v1/profile?${params}`, {
+      credentials: "omit",
+    });
+
+    if (!response.ok) {
+      console.warn(
+        "Profile history fetch failed - not ok response:",
+        response.status
+      );
+      return null;
+    }
+
+    const rawData = await response.text();
+    const parsed = parseNightscoutResponse(rawData);
+
+    return parsed;
+  } catch (e) {
+    console.warn("Profile history fetch failed:", e);
+    return null;
+  }
+}
+
+/**
+ * Orchestrates fetching all Nightscout data including profile history
  */
 export async function fetchAllNightscoutData(
   apiUrl: string,
   token: string,
   days: number
-): Promise<{ entries: any; treatments: any; profile: any | null }> {
+): Promise<{
+  entries: any;
+  treatments: any;
+  profile: any | null;
+  profileHistory: any | null;
+}> {
   const baseUrl = buildBaseUrl(apiUrl);
   const since = calculateSinceDate(days);
 
@@ -130,8 +172,11 @@ export async function fetchAllNightscoutData(
     fetchTreatments(baseUrl, treatmentsParams),
   ]);
 
-  // Fetch profile separately (optional)
-  const profile = await fetchProfile(baseUrl, token);
+  // Fetch current profile and profile history separately (both optional)
+  const [profile, profileHistory] = await Promise.all([
+    fetchProfile(baseUrl, token),
+    fetchProfileHistory(baseUrl, token, since),
+  ]);
 
-  return { entries, treatments, profile };
+  return { entries, treatments, profile, profileHistory };
 }
