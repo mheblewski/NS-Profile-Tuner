@@ -21,7 +21,9 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
   const icon = isWarning ? "⚠️" : "ℹ️";
 
   return (
-    <div className={`p-4 ${bgColor} border ${borderColor} rounded mb-4`}>
+    <div
+      className={`p-4 ${bgColor} border ${borderColor} rounded-xl shadow-lg mb-4`}
+    >
       {/* Main warning/info */}
       <div className="flex items-start mb-3">
         <div className={`${iconColor} mr-2 text-lg`}>{icon}</div>
@@ -107,24 +109,10 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
                               <span className="font-semibold">
                                 {fieldLabels[field] || field.toUpperCase()}:
                               </span>
-                              <table className="min-w-[220px] border text-xs mt-1 mb-1">
-                                <thead>
-                                  <tr className="bg-gray-100">
-                                    <th className="px-2 py-1 border text-center">
-                                      Godzina
-                                    </th>
-                                    <th className="px-2 py-1 border text-center">
-                                      Przed zmianą
-                                    </th>
-                                    <th className="px-2 py-1 border text-center">
-                                      Po zmianie
-                                    </th>
-                                    <th className="px-2 py-1 border text-center">
-                                      Δ
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
+                              {/* Mobile: paski, Desktop: card-table */}
+                              <div>
+                                {/* Mobile: paski */}
+                                <div className="flex flex-col gap-1 md:hidden">
                                   {changedTimes.map((time) => {
                                     const oldVal = prevMap.has(time)
                                       ? prevMap.get(time)
@@ -151,55 +139,165 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
                                     ) {
                                       delta = -100;
                                     }
+                                    const isChanged = oldVal !== newVal;
+                                    // Units for each field
+                                    const units =
+                                      field === "basal"
+                                        ? "U/h"
+                                        : field === "icr"
+                                        ? "g/U"
+                                        : field === "isf"
+                                        ? "mg/dL/U"
+                                        : "";
                                     return (
-                                      <tr
+                                      <div
                                         key={time}
-                                        className={
-                                          "bg-yellow-50 hover:bg-yellow-100 transition-colors duration-150"
-                                        }
+                                        className="relative border border-gray-200 rounded-md px-6 py-2 bg-white flex items-center min-h-[32px]"
+                                        style={{ fontSize: "13px" }}
                                       >
-                                        <td className="px-2 py-1 border font-mono text-center">
+                                        <span className="font-bold text-gray-800 min-w-[44px] text-[13.5px]">
                                           {time}
-                                        </td>
-                                        <td className="px-2 py-1 border text-center">
+                                        </span>
+                                        <span className="text-gray-500 ml-4">
                                           {oldVal !== null ? (
                                             oldVal
                                           ) : (
-                                            <span className="text-gray-400">
+                                            <span className="text-gray-300">
                                               —
                                             </span>
                                           )}
-                                        </td>
-                                        <td className="px-2 py-1 border text-center">
+                                        </span>
+                                        <span className="text-gray-400 mx-1">
+                                          →
+                                        </span>
+                                        <span className="text-blue-700 font-bold">
                                           {newVal !== null ? (
                                             newVal
                                           ) : (
-                                            <span className="text-gray-400">
+                                            <span className="text-gray-300">
                                               —
                                             </span>
                                           )}
-                                        </td>
-                                        <td className="px-2 py-1 border text-center">
+                                        </span>
+                                        {units && (
+                                          <span className="text-gray-400 ml-1 font-normal">
+                                            {units}
+                                          </span>
+                                        )}
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold">
                                           {oldVal === null &&
                                           newVal !== null ? (
-                                            <span className="text-green-700 font-semibold">
-                                              Nowy slot
-                                            </span>
+                                            <span>Nowy slot</span>
                                           ) : delta !== null ? (
                                             `${
                                               delta > 0 ? "+" : ""
-                                            }${delta.toFixed(1)}%`
+                                            }${Math.round(delta)}%`
                                           ) : (
-                                            <span className="text-gray-400">
-                                              —
-                                            </span>
+                                            <span>—</span>
                                           )}
-                                        </td>
-                                      </tr>
+                                        </span>
+                                      </div>
                                     );
                                   })}
-                                </tbody>
-                              </table>
+                                </div>
+                                {/* Desktop: card-table */}
+                                <div className="hidden md:block">
+                                  <table className="min-w-[320px] w-full rounded-xl overflow-hidden shadow border text-xs mt-1 mb-1">
+                                    <thead>
+                                      <tr className="bg-gray-100">
+                                        <th className="px-3 py-2 border-b text-center font-semibold">
+                                          Godzina
+                                        </th>
+                                        <th className="px-3 py-2 border-b text-center font-semibold">
+                                          Przed zmianą
+                                        </th>
+                                        <th className="px-3 py-2 border-b text-center font-semibold">
+                                          Po zmianie
+                                        </th>
+                                        <th className="px-3 py-2 border-b text-center font-semibold">
+                                          Δ
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {changedTimes.map((time, idx, arr) => {
+                                        const oldVal = prevMap.has(time)
+                                          ? prevMap.get(time)
+                                          : null;
+                                        const newVal = currMap.has(time)
+                                          ? currMap.get(time)
+                                          : null;
+                                        let delta = null;
+                                        if (
+                                          oldVal !== null &&
+                                          newVal !== null &&
+                                          oldVal !== 0
+                                        ) {
+                                          delta =
+                                            ((newVal - oldVal) / oldVal) * 100;
+                                        } else if (
+                                          oldVal === null &&
+                                          newVal !== null
+                                        ) {
+                                          delta = 100;
+                                        } else if (
+                                          oldVal !== null &&
+                                          newVal === null
+                                        ) {
+                                          delta = -100;
+                                        }
+                                        // Szary border tylko pomiędzy wierszami
+                                        const borderClass =
+                                          idx < arr.length - 1
+                                            ? "border-b border-gray-200"
+                                            : "";
+                                        return (
+                                          <tr
+                                            key={time}
+                                            className={`bg-white ${borderClass} transition-colors duration-150`}
+                                          >
+                                            <td className="px-3 py-2 text-center text-[13px] font-bold text-gray-800">
+                                              {time}
+                                            </td>
+                                            <td className="px-3 py-2 text-center text-gray-700">
+                                              {oldVal !== null ? (
+                                                oldVal
+                                              ) : (
+                                                <span className="text-gray-300">
+                                                  —
+                                                </span>
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2 text-center text-blue-700 font-semibold">
+                                              {newVal !== null ? (
+                                                newVal
+                                              ) : (
+                                                <span className="text-gray-300">
+                                                  —
+                                                </span>
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                              <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px]">
+                                                {oldVal === null &&
+                                                newVal !== null ? (
+                                                  <span>Nowy slot</span>
+                                                ) : delta !== null ? (
+                                                  `${
+                                                    delta > 0 ? "+" : ""
+                                                  }${delta.toFixed(1)}%`
+                                                ) : (
+                                                  <span>—</span>
+                                                )}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
                             </div>
                           );
                         })}

@@ -3,6 +3,8 @@ import React from "react";
 /**
  * Component for configuring API connection settings
  */
+import ActionButtons from "./ActionButtons";
+
 export default function ConfigurationForm({
   apiUrl,
   setApiUrl,
@@ -12,9 +14,14 @@ export default function ConfigurationForm({
   setDays,
   basalStep,
   setBasalStep,
+  onAnalyze,
+  onClear,
+  isLoading,
+  canSubmit,
+  hasResult,
 }) {
   return (
-    <div className="p-4 border rounded mb-4">
+    <div className="p-4 border rounded-xl shadow-lg mb-4 bg-white">
       <div className="space-y-4">
         <div className="space-y-3">
           <div>
@@ -112,6 +119,13 @@ export default function ConfigurationForm({
           </div>
         </div>
       </div>
+      <ActionButtons
+        onAnalyze={onAnalyze}
+        onClear={onClear}
+        isLoading={isLoading}
+        canSubmit={canSubmit}
+        hasResult={hasResult}
+      />
     </div>
   );
 }

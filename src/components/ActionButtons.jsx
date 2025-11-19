@@ -13,7 +13,7 @@ export default function ActionButtons({
   const isDisabled = isLoading || !canSubmit;
 
   return (
-    <div className="flex flex-col md:flex-row gap-2 mb-4">
+    <div className="flex flex-col md:flex-row gap-2 mt-4">
       <button
         className={`px-4 py-3 md:py-2 text-sm rounded transition-colors duration-200 md:flex-1 ${
           isDisabled

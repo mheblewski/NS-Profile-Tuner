@@ -1,7 +1,6 @@
 import React from "react";
 import { useNightscoutAnalyzer } from "./logic/useNightscoutAnalyzer";
 import ConfigurationForm from "./components/ConfigurationForm";
-import ActionButtons from "./components/ActionButtons";
 import ErrorDisplay from "./components/ErrorDisplay";
 import ResultsDisplay from "./components/ResultsDisplay";
 
@@ -31,9 +30,7 @@ export default function NSProfileTuner({ defaultDays = 3 }) {
   return (
     <div
       style={{
-        background: "#FAFAFA",
         color: "#000000",
-        border: "1px solid #ccc",
         width: "100%",
         ...(result
           ? {}
@@ -44,8 +41,6 @@ export default function NSProfileTuner({ defaultDays = 3 }) {
       }}
       className="mx-auto p-4"
     >
-      <h1 className="text-xl font-bold mb-4">NS Profile Tuner</h1>
-
       <ConfigurationForm
         apiUrl={apiUrl}
         setApiUrl={setApiUrl}
@@ -55,9 +50,6 @@ export default function NSProfileTuner({ defaultDays = 3 }) {
         setDays={setDays}
         basalStep={basalStep}
         setBasalStep={setBasalStep}
-      />
-
-      <ActionButtons
         onAnalyze={analyzeAndBuild}
         onClear={clearAll}
         isLoading={isLoading}

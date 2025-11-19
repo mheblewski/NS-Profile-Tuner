@@ -9,6 +9,7 @@ export default function App() {
         justifyContent: "center",
         alignItems: "center",
         maxWidth: "100vw",
+        backgroundColor: "#f8fafc",
       }}
     >
       <NSProfileTuner defaultDays={7} />
