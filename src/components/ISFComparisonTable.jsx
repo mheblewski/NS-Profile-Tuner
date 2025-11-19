@@ -1,15 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 /**
  * Component for displaying ISF analysis with separate tables for modifications and new slots
  */
 export default function ISFComparisonTable({ isfData, isfStructuredData }) {
-  const [showUnchanged, setShowUnchanged] = useState(false);
+  const [showUnchanged, setShowUnchanged] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(min-width: 768px)").matches;
+    }
+    return false;
+  });
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const handler = (e) => {
+      setShowUnchanged(e.matches);
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
   // Use structured data if available for separate display
   const hasStructuredData =
     isfStructuredData &&
     (isfStructuredData.modifications?.length > 0 ||
-      isfStructuredData.newSlots?.length > 0);
+      isfStructuredData.newSlots?.length > 0 ||
+      (Array.isArray(isfStructuredData.newSlots) &&
+        isfStructuredData.newSlots.length > 0));
 
   if (!hasStructuredData && (!isfData || isfData.length === 0)) {
     return (
@@ -28,11 +43,10 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
         {(isfStructuredData.modifications?.length > 0 ||
           isfStructuredData.profileCompliant?.length > 0) && (
           <section className="p-4 border bg-white rounded-xl shadow-lg">
-            <h3 className="font-semibold mb-2">
-              Profil ISF - Istniejące sloty
-            </h3>
-            {/* Toggle for unchanged slots */}
-            <div className="mb-2 md:hidden">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+              <h3 className="font-semibold mb-2 md:mb-0 flex items-center">
+                Profil ISF
+              </h3>
               <button
                 className="text-xs px-3 py-1 rounded border bg-gray-50 hover:bg-gray-100 text-gray-700"
                 onClick={() => setShowUnchanged((v) => !v)}
@@ -132,6 +146,7 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                   ...(isfStructuredData.modifications || []),
                 ]
                   .sort((a, b) => a.hour - b.hour)
+                  .filter((s) => showUnchanged || !s.isProfileCompliant)
                   .map((s, i) => (
                     <tr
                       key={i}
@@ -172,7 +187,7 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
             <p className="text-sm text-gray-600 mb-3">
               Sugerowane time sloty które należy dodać do profilu
             </p>
-            <table className="w-full table-auto text-sm">
+            <table className="w-full min-w-[420px] rounded-xl overflow-hidden shadow border text-[15px] hidden md:table">
               <thead className="bg-gray-100">
                 <tr>
                   <th className="p-2 text-center">Godzina</th>
@@ -205,8 +220,10 @@ export default function ISFComparisonTable({ isfData, isfStructuredData }) {
                         {s.suggestedISF}
                       </td>
                       <td className="p-2 text-center">
-                        {s.adjustmentPct > 0 ? "+" : ""}
-                        {s.adjustmentPct}%
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold">
+                          {s.adjustmentPct > 0 ? "+" : ""}
+                          {s.adjustmentPct}%
+                        </span>
                       </td>
                     </tr>
                   ))}

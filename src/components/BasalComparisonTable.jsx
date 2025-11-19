@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Big from "big.js";
 export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
   // Helper: how many decimal places the step has
@@ -30,15 +30,38 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
       return "";
     }
   }
-  const [showUnchanged, setShowUnchanged] = useState(false);
+  const [showUnchanged, setShowUnchanged] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(min-width: 768px)").matches;
+    }
+    return false;
+  });
+
+  // Synchronizuj stan przy zmianie rozmiaru okna (np. po przełączeniu mobile/desktop)
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const handler = (e) => {
+      setShowUnchanged(e.matches);
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
   return (
     <section className="p-4 border bg-white rounded-xl shadow-lg">
-      <h3 className="font-semibold mb-2">
-        Profil bazy
-        <span className="ml-2 text-xs font-normal text-gray-600">
-          * Wartości zaokrąglane do {basalStep}U
-        </span>
-      </h3>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+        <h3 className="font-semibold mb-2 md:mb-0 flex items-center">
+          Profil bazy
+          <span className="ml-2 text-xs font-normal text-gray-600">
+            * Wartości zaokrąglane do {basalStep}U
+          </span>
+        </h3>
+        <button
+          className="text-xs px-3 py-1 rounded border bg-gray-50 hover:bg-gray-100 text-gray-700"
+          onClick={() => setShowUnchanged((v) => !v)}
+        >
+          {showUnchanged ? "Ukryj sloty bez zmiany" : "Pokaż wszystkie sloty"}
+        </button>
+      </div>
 
       {!basalData || basalData.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
@@ -47,16 +70,6 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
       ) : (
         <>
           {/* Mobile: karty */}
-          <div className="mb-2 md:hidden">
-            <button
-              className="text-xs px-3 py-1 rounded border bg-gray-50 hover:bg-gray-100 text-gray-700"
-              onClick={() => setShowUnchanged((v) => !v)}
-            >
-              {showUnchanged
-                ? "Ukryj sloty bez zmiany"
-                : "Pokaż wszystkie sloty"}
-            </button>
-          </div>
           <div className="flex flex-col gap-1 md:hidden">
             {basalData
               .filter((b) => showUnchanged || Math.abs(b.new - b.old) > 0.001)
@@ -89,7 +102,7 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
                         </span>
                       </span>
                     </div>
-                    <style jsx>{`
+                    <style>{`
                       @media (max-width: 767px) {
                         .relative-card {
                           position: relative;
@@ -132,35 +145,39 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
                 </tr>
               </thead>
               <tbody>
-                {basalData.map((b, idx) => {
-                  const changed = Math.abs(b.new - b.old) > 0.001;
-                  return (
-                    <tr
-                      key={idx}
-                      className={`transition-colors duration-150 border-b hover:bg-gray-100 ${
-                        changed
-                          ? "bg-yellow-50 hover:bg-yellow-100"
-                          : "bg-white"
-                      }`}
-                    >
-                      <td className="px-3 py-2 border-b text-center text-[15px] font-bold text-gray-800">
-                        {b.time}
-                      </td>
-                      <td className="px-3 py-2 border-b text-center text-gray-700">
-                        {formatWithStep(b.old, basalStep)}
-                      </td>
-                      <td className="px-3 py-2 border-b text-center text-blue-900 font-semibold">
-                        {formatWithStep(b.new, basalStep)}
-                      </td>
-                      <td className="px-3 py-2 border-b text-center">
-                        <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold">
-                          {b.pct > 0 ? "+" : ""}
-                          {b.pct}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {basalData
+                  .filter(
+                    (b) => showUnchanged || Math.abs(b.new - b.old) > 0.001
+                  )
+                  .map((b, idx) => {
+                    const changed = Math.abs(b.new - b.old) > 0.001;
+                    return (
+                      <tr
+                        key={idx}
+                        className={`transition-colors duration-150 border-b hover:bg-gray-100 ${
+                          changed
+                            ? "bg-yellow-50 hover:bg-yellow-100"
+                            : "bg-white"
+                        }`}
+                      >
+                        <td className="px-3 py-2 border-b text-center text-[15px] font-bold text-gray-800">
+                          {b.time}
+                        </td>
+                        <td className="px-3 py-2 border-b text-center text-gray-700">
+                          {formatWithStep(b.old, basalStep)}
+                        </td>
+                        <td className="px-3 py-2 border-b text-center text-blue-900 font-semibold">
+                          {formatWithStep(b.new, basalStep)}
+                        </td>
+                        <td className="px-3 py-2 border-b text-center">
+                          <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold">
+                            {b.pct > 0 ? "+" : ""}
+                            {b.pct}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
