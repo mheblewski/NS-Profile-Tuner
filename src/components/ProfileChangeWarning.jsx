@@ -16,7 +16,7 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
   const isWarning = !recommendation.shouldUseSegmentation;
   const bgColor = isWarning ? "bg-yellow-50" : "bg-blue-50";
   const borderColor = isWarning ? "border-yellow-200" : "border-blue-200";
-  const textColor = isWarning ? "text-yellow-800" : "text-blue-800";
+  const textColor = isWarning ? "text-gray-600" : "text-blue-800";
   const iconColor = isWarning ? "text-yellow-600" : "text-blue-600";
   const icon = isWarning ? "⚠️" : "ℹ️";
 
@@ -38,7 +38,7 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
       {/* Main warning/info */}
       <div className="flex items-start mb-3">
         <div className={`${iconColor} mr-2 text-lg`}>{icon}</div>
-        <div className={`${textColor} flex-1`}>
+        <div className={`flex-1`}>
           <div className="font-semibold mb-1">
             {isWarning
               ? "Uwaga: Wykryto niedawne zmiany profilu"

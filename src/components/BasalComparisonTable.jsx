@@ -49,12 +49,7 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
   return (
     <section className="p-4 border bg-white rounded-xl shadow-lg">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold flex items-center">
-          Profil bazy
-          <span className="ml-2 text-xs font-normal text-gray-600">
-            * Wartości zaokrąglane do {basalStep}U
-          </span>
-        </h3>
+        <h3 className="font-semibold flex items-center">Profil bazy</h3>
         <button
           className={
             "ml-2 px-3 py-1 rounded font-semibold text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-gray-300 bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
