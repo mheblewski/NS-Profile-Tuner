@@ -131,16 +131,15 @@ export function detectDailyProfileChanges(profileHistory: any[], days: number) {
  * Main analysis logic that combines all components
  */
 
+import { computeBasalAdjustments } from "./dataAnalysis/basal";
+import { analyzeHourlyICR, HourlyICRAdjustment } from "./dataAnalysis/ICR";
 import {
-  hourlyAverage,
-  computeBasalAdjustments,
-  analyzeTreatments,
-  analyzeHourlyICR,
   analyzeHourlyISF,
-  validateProfileRecommendations,
-  type HourlyICRAdjustment,
-  type HourlyISFAdjustment,
-} from "./dataAnalysis";
+  analyzeTreatments,
+  HourlyISFAdjustment,
+} from "./dataAnalysis/ISF";
+import { validateProfileRecommendations } from "./dataAnalysis/profileValidation";
+import { hourlyAverage } from "./dataAnalysis/utils";
 import {
   parseLoopProfile,
   applyAdjustmentsToProfile,
