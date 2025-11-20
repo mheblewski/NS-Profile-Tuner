@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Big from "big.js";
+import BasalProfileChart from "./BasalProfileChart";
+
 export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
   // Helper: how many decimal places the step has
   function getStepDecimals(step) {
@@ -180,6 +182,7 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
           </div>
         </>
       )}
+      <BasalProfileChart basalData={basalData} />
     </section>
   );
 }

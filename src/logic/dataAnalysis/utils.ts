@@ -2,7 +2,7 @@
  * Converts ISO string to UTC hour (0-23)
  */
 function isoToHour(iso: string): number {
-  return new Date(iso).getUTCHours();
+  return new Date(iso).getHours();
 }
 
 /**

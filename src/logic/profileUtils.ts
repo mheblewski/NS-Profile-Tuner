@@ -2,10 +2,8 @@
  * Functions for handling profile parsing and adjustments
  */
 
-import {
-  type HourlyICRAdjustment,
-  type HourlyISFAdjustment,
-} from "./dataAnalysis";
+import { HourlyICRAdjustment } from "./dataAnalysis/ICR";
+import { HourlyISFAdjustment } from "./dataAnalysis/ISF";
 
 export interface ProfileAdjustments {
   newBasal: Array<{
@@ -132,7 +130,8 @@ export function applyAdjustmentsToProfile(
 
     newBasal = curBasal.map((b, i) => {
       const pct = basalAdjPct[i] || 0;
-      const newVal = roundBasal(b.value * (1 + pct / 100), basalStep);
+      const newVal = roundBasal(b.value + b.value * (pct / 100), basalStep);
+
       return { time: b.time, old: b.value, new: newVal, pct };
     });
   }
