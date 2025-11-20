@@ -1,7 +1,7 @@
 import { useFetchFromApi } from "./useFetchFromApi";
 import { useAnalysis } from "./useAnalysis";
 import { useConfiguration } from "./useConfiguration";
-
+import { format } from "./dataFormat";
 /**
  * Main hook that combines all Nightscout analysis functionality
  */
@@ -33,9 +33,19 @@ export function useNightscoutAnalyzer(defaultDays: number = 3) {
         daysNum
       );
 
-      // Run analysis
+      const {
+        glucoseEntries,
+        treatmentEntries,
+        profileEntries,
+        profileHistoryEntries,
+      } = format(fetchResult);
+
+      // Run analysis na przetworzonych danych (z Date)
       const analysisResult = await analysis.runAnalysis({
-        ...fetchResult,
+        entries: glucoseEntries,
+        treatments: treatmentEntries,
+        profile: profileEntries[0],
+        profileHistory: profileHistoryEntries,
         basalStep: basalStepNum,
         days: daysNum,
       });

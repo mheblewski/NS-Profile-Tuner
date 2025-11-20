@@ -5,12 +5,15 @@ import {
   logError,
   validateApiConfiguration,
 } from "./validationUtils";
+import { GlucoseEntryTO } from "../interfaces/GlucoseEntryTO";
+import { TreatmentTO } from "../interfaces/TreatmentTO";
+import { ProfileTO } from "../interfaces/ProfileTO";
 
 export interface FetchResult {
-  entries: any;
-  treatments: any;
-  profile: any;
-  profileHistory: any;
+  entries: GlucoseEntryTO[];
+  treatments: TreatmentTO[];
+  profile: ProfileTO[];
+  profileHistory: ProfileTO[];
 }
 
 /**

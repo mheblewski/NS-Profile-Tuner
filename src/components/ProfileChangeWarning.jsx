@@ -13,12 +13,11 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
   }
 
   // Determine warning level based on recommendation
-  const isWarning = !recommendation.shouldUseSegmentation;
-  const bgColor = isWarning ? "bg-yellow-50" : "bg-blue-50";
-  const borderColor = isWarning ? "border-yellow-200" : "border-blue-200";
-  const textColor = isWarning ? "text-gray-600" : "text-blue-800";
-  const iconColor = isWarning ? "text-yellow-600" : "text-blue-600";
-  const icon = isWarning ? "⚠️" : "ℹ️";
+  const bgColor = "bg-yellow-50";
+  const borderColor = "border-yellow-200";
+  const textColor = "text-gray-600";
+  const iconColor = "text-yellow-600";
+  const icon = "⚠️";
 
   // Stan rozwinięcia szczegółów dla każdego dnia
   const [expandedDays, setExpandedDays] = useState({});
@@ -40,11 +39,8 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
         <div className={`${iconColor} mr-2 text-lg`}>{icon}</div>
         <div className={`flex-1`}>
           <div className="font-semibold mb-1">
-            {isWarning
-              ? "Uwaga: Wykryto niedawne zmiany profilu"
-              : "Info: Zastosowano segmentację danych"}
+            {"Uwaga: Wykryto niedawne zmiany profilu"}
           </div>
-          <div className="text-sm">{recommendation.reason}</div>
         </div>
       </div>
 
@@ -362,19 +358,9 @@ export default function ProfileChangeWarning({ profileChangeAnalysis }) {
           "700"
         )}`}
       >
-        {isWarning ? (
-          <>
-            <strong>Zalecenie:</strong> Rozważ analizę krótszego okresu lub
-            akceptuj wyniki z ostrożnością. Najlepsze rezultaty uzyskasz
-            analizując dane po stabilizacji profilu.
-          </>
-        ) : (
-          <>
-            <strong>Analiza optymalna:</strong> Używane są tylko dane po
-            ostatniej zmianie profilu, co zapewnia bardziej precyzyjne
-            rekomendacje.
-          </>
-        )}
+        <strong>Zalecenie:</strong> Rozważ analizę krótszego okresu lub akceptuj
+        wyniki z ostrożnością. Najlepsze rezultaty uzyskasz analizując dane po
+        stabilizacji profilu.
       </div>
     </div>
   );

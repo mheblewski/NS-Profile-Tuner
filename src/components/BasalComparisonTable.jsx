@@ -1,37 +1,20 @@
 import React, { useState, useEffect } from "react";
-import Big from "big.js";
 import BasalProfileChart from "./BasalProfileChart";
 
 export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
-  // Helper: how many decimal places the step has
-  function getStepDecimals(step) {
-    if (!step || isNaN(step)) return 2;
-    let s = typeof step === "string" ? step : Number(step).toFixed(20);
-    if (s.indexOf(".") === -1) return 0;
-    return s.split(".")[1].replace(/0+$/, "").length;
+  function formatWithStep(value, step) {
+    const decimals = countDecimals(step);
+    const scale = Math.pow(10, decimals);
+
+    const v = Math.round((value * scale) / (step * scale)) * step;
+    return Number((Math.round(v * scale) / scale).toFixed(decimals));
   }
 
-  // Helper: round to the nearest multiple of step and format with the given number of decimals, trim trailing zeros
-  function formatWithStep(val, step) {
-    if (val == null || isNaN(val) || !step || isNaN(step)) return "";
-    const decimals = getStepDecimals(step);
-    try {
-      const bigVal = Big(val);
-      const bigStep = Big(step);
-      // Divide, round to nearest integer, then multiply back
-      const rounded = bigStep.times(bigVal.div(bigStep).round(0, 3)); // 3 = round half up
-      let str = rounded.toFixed(decimals);
-      // Replace dot with comma
-      str = str.replace(".", ",");
-      // Remove trailing zeros after the decimal separator
-      str = str.replace(/(,\d*?[1-9])0+$/g, "$1");
-      // If only zeros or nothing remain after the comma, remove the comma
-      str = str.replace(/,0*$/, "");
-      return str;
-    } catch (e) {
-      return "";
-    }
+  function countDecimals(num) {
+    if (Math.floor(num) === num) return 0;
+    return num.toString().split(".")[1].length;
   }
+
   const [showUnchanged, setShowUnchanged] = useState(() => {
     if (typeof window !== "undefined") {
       return window.matchMedia("(min-width: 768px)").matches;
@@ -71,10 +54,10 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
           {/* Mobile: karty */}
           <div className="flex flex-col gap-1 md:hidden">
             {basalData
-              .filter((b) => showUnchanged || Math.abs(b.new - b.old) > 0.001)
+              .filter((b) => showUnchanged || Math.abs(b.newValue - b.oldValue) > 0.001)
               .map((b, idx) => {
-                const changed = Math.abs(b.new - b.old) > 0.001;
-                const delta = `${b.pct > 0 ? "+" : ""}${b.pct}%`;
+                const changed = Math.abs(b.newValue - b.oldValue) > 0.001;
+                const delta = `${b.deltaPercent > 0 ? "+" : ""}${b.deltaPercent}%`;
                 return (
                   <div
                     key={idx}
@@ -96,8 +79,8 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
                       )}
                       <span className="ml-auto flex items-center h-full absolute right-4 top-1/2 -translate-y-1/2">
                         <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold flex items-center">
-                          {b.pct > 0 ? "+" : ""}
-                          {b.pct}%
+                          {b.deltaPercent > 0 ? "+" : ""}
+                          {b.deltaPercent}%
                         </span>
                       </span>
                     </div>
@@ -111,12 +94,12 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
                     {/* Linia 2: stara wartość → nowa wartość (+delta) */}
                     <div className="text-[15px] text-gray-700 mt-0.5 flex items-center gap-2">
                       <span>
-                        {formatWithStep(b.old, basalStep)}{" "}
+                        {formatWithStep(b.oldValue, basalStep)}{" "}
                         <span className="text-gray-400 text-[13px]">U/h</span>
                       </span>
                       <span className="text-gray-400 text-[18px]">→</span>
                       <span className="font-bold text-blue-900">
-                        {formatWithStep(b.new, basalStep)}
+                        {formatWithStep(b.newValue, basalStep)}
                       </span>{" "}
                       <span className="text-gray-400 text-[13px]">U/h</span>
                     </div>
@@ -146,10 +129,10 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
               <tbody>
                 {basalData
                   .filter(
-                    (b) => showUnchanged || Math.abs(b.new - b.old) > 0.001
+                    (b) => showUnchanged || Math.abs(b.newValue - b.oldValue) > 0.001
                   )
                   .map((b, idx) => {
-                    const changed = Math.abs(b.new - b.old) > 0.001;
+                    const changed = Math.abs(b.newValue - b.oldValue) > 0.001;
                     return (
                       <tr
                         key={idx}
@@ -163,15 +146,15 @@ export default function BasalComparisonTable({ basalData, basalStep = 0.05 }) {
                           {b.time}
                         </td>
                         <td className="px-3 py-2 border-b text-center text-gray-700">
-                          {formatWithStep(b.old, basalStep)}
+                          {formatWithStep(b.oldValue, basalStep)}
                         </td>
                         <td className="px-3 py-2 border-b text-center text-blue-900 font-semibold">
-                          {formatWithStep(b.new, basalStep)}
+                          {formatWithStep(b.newValue, basalStep)}
                         </td>
                         <td className="px-3 py-2 border-b text-center">
                           <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[13px] font-semibold">
-                            {b.pct > 0 ? "+" : ""}
-                            {b.pct}%
+                            {b.deltaPercent > 0 ? "+" : ""}
+                            {b.deltaPercent}%
                           </span>
                         </td>
                       </tr>

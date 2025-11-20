@@ -19,22 +19,22 @@ export default function ResultsDisplay({ result }) {
         profileChangeAnalysis={result.profileChangeAnalysis}
       />
 
+      <HourlyGlucoseDisplay hourlyAvg={result.hourlyAvg} />
+
       <BasalComparisonTable
-        basalData={result.adjustments.newBasal}
+        basalData={result.basalChange}
         basalStep={result.basalStep}
       />
 
-      <ICRComparisonTable
-        icrData={result.adjustments.newICR}
-        icrStructuredData={result.hourlyICRAdjustments}
-      />
+      {/* // <ICRComparisonTable
+      //   icrData={result.adjustments.newICR}
+      //   icrStructuredData={result.hourlyICRAdjustments}
+      // />
 
-      <ISFComparisonTable
-        isfData={result.adjustments.newSens}
-        isfStructuredData={result.hourlyISFAdjustments}
-      />
-
-      <HourlyGlucoseDisplay hourlyAvg={result.hourlyAvg} />
+      // <ISFComparisonTable
+      //   isfData={result.adjustments.newSens}
+      //   isfStructuredData={result.hourlyISFAdjustments}
+      // /> */}
 
       {/* Temporarily hidden - Result actions */}
       {/* <ResultActions result={result} /> */}

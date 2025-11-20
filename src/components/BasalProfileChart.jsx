@@ -57,15 +57,14 @@ function formatWithStep(val, step) {
 }
 
 export default function BasalProfileChart({ basalData, basalStep = 0.05 }) {
-  console.log(basalData);
   if (!basalData || basalData.length === 0) return null;
 
   const labels = basalData.map((b) => b.time);
   const actual = basalData.map((b) =>
-    Number(formatWithStep(b.old, basalStep).replace(",", "."))
+    Number(formatWithStep(b.oldValue, basalStep).replace(",", "."))
   );
   const suggested = basalData.map((b) =>
-    Number(formatWithStep(b.new, basalStep).replace(",", "."))
+    Number(formatWithStep(b.newValue, basalStep).replace(",", "."))
   );
 
   const data = {
